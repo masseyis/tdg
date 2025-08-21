@@ -1,0 +1,27 @@
+# Generate test data from a spec file
+curl -X POST http://localhost:8080/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "openapi": "'$(base64 < tests/samples/petstore-minimal.yaml)'",
+    "casesPerEndpoint": 5,
+    "outputs": ["junit", "postman", "json"],
+    "seed": 42
+  }' \
+  --output artifacts.zip
+
+# Generate from URL
+curl -X POST http://localhost:8080/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "openapi": "https://petstore3.swagger.io/api/v3/openapi.json",
+    "casesPerEndpoint": 10,
+    "outputs": ["junit", "postman", "wiremock", "csv", "sql"],
+    "domainHint": "e-commerce pets"
+  }' \
+  --output artifacts.zip
+
+# Validate a spec
+curl -X POST http://localhost:8080/api/validate \
+  -H "Content-Type: application/json" \
+  -d '{"openapi": "'$(base64 < tests/samples/simple-api.json)'"}' \
+  | jq .

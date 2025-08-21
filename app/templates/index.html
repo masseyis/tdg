@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Test Data{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Generate Test Data from OpenAPI</h1>
+    <p>Upload your OpenAPI specification to generate comprehensive test artifacts</p>
+</div>
+
+{% if error %}
+<div class="alert alert-error">
+    {{ error }}
+</div>
+{% endif %}
+
+<form action="/generate-ui" method="POST" enctype="multipart/form-data" class="form">
+    <div class="form-group">
+        <label for="spec_file">OpenAPI Specification File</label>
+        <input type="file" id="spec_file" name="spec_file" accept=".json,.yaml,.yml">
+        <small>Upload a JSON or YAML OpenAPI specification</small>
+    </div>
+    
+    <div class="form-group">
+        <label for="spec_url">Or provide a URL</label>
+        <input type="url" id="spec_url" name="spec_url" placeholder="https://api.example.com/openapi.json">
+        <small>Direct link to your OpenAPI specification</small>
+    </div>
+    
+    <div class="form-group">
+        <label for="cases_per_endpoint">Cases per Endpoint</label>
+        <input type="number" id="cases_per_endpoint" name="cases_per_endpoint" value="10" min="1" max="100">
+        <small>Number of test cases to generate for each endpoint</small>
+    </div>
+    
+    <div class="form-group">
+        <label>Output Formats</label>
+        <div class="checkbox-group">
+            <label class="checkbox">
+                <input type="checkbox" name="outputs" value="junit" checked>
+                <span>JUnit + REST Assured</span>
+            </label>
+            <label class="checkbox">
+                <input type="checkbox" name="outputs" value="postman" checked>
+                <span>Postman Collection</span>
+            </label>
+            <label class="checkbox">
+                <input type="checkbox" name="outputs" value="wiremock">
+                <span>WireMock Stubs</span>
+            </label>
+            <label class="checkbox">
+                <input type="checkbox" name="outputs" value="json" checked>
+                <span>JSON Data</span>
+            </label>
+            <label class="checkbox">
+                <input type="checkbox" name="outputs" value="csv">
+                <span>CSV Export</span>
+            </label>
+            <label class="checkbox">
+                <input type="checkbox" name="outputs" value="sql">
+                <span>SQL Inserts</span>
+            </label>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label for="domain_hint">Domain Context (Optional)</label>
+        <input type="text" id="domain_hint" name="domain_hint" placeholder="e.g., e-commerce, healthcare, finance">
+        <small>Helps generate more relevant test data</small>
+    </div>
+    
+    <div class="form-group">
+        <label for="seed">Random Seed (Optional)</label>
+        <input type="number" id="seed" name="seed" placeholder="42">
+        <small>For reproducible test data generation</small>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Generate Test Artifacts</button>
+</form>
+
+<div class="features">
+    <h2>Features</h2>
+    <div class="feature-grid">
+        <div class="feature">
+            <h3>🤖 AI-Enhanced</h3>
+            <p>Optional AI providers for smarter test data generation</p>
+        </div>
+        <div class="feature">
+            <h3>🎯 Comprehensive</h3>
+            <p>Valid, boundary, and negative test cases</p>
+        </div>
+        <div class="feature">
+            <h3>🔧 Multiple Formats</h3>
+            <p>JUnit, Postman, WireMock, CSV, SQL, and more</p>
+        </div>
+        <div class="feature">
+            <h3>🔄 Reproducible</h3>
+            <p>Seed-based generation for consistent results</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

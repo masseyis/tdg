@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Generation Results{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>✅ Test Artifacts Generated</h1>
+    <p>Your test data has been successfully generated</p>
+</div>
+
+<div class="results">
+    <div class="stats">
+        <div class="stat">
+            <span class="stat-value">{{ endpoint_count }}</span>
+            <span class="stat-label">Endpoints</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value">{{ total_cases }}</span>
+            <span class="stat-label">Test Cases</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value">{{ output_count }}</span>
+            <span class="stat-label">Output Formats</span>
+        </div>
+    </div>
+    
+    <div class="download-section">
+        <a href="{{ download_url }}" class="btn btn-primary btn-large">
+            📥 Download Artifacts (ZIP)
+        </a>
+    </div>
+    
+    <div class="file-list">
+        <h2>Generated Files</h2>
+        <ul>
+            {% for file in files %}
+            <li>{{ file }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    
+    <div class="actions">
+        <a href="/" class="btn btn-secondary">Generate More</a>
+    </div>
+</div>
+{% endblock %}
