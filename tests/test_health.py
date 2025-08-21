@@ -16,4 +16,4 @@ def test_root_page():
     """Test root page loads"""
     response = client.get("/")
     assert response.status_code == 200
-    assert "Test Data Generator" in response.text
+    assert "SpecMint" in response.text
