@@ -217,7 +217,7 @@
             submitBtn.disabled = true;
             
             try {
-                const response = await fetch('/api/generate', {
+                const response = await fetch('/generate-ui', {
                     method: 'POST',
                     body: formData
                 });
@@ -236,9 +236,12 @@
                     // Show results
                     document.getElementById('results').classList.remove('hidden');
                 } else {
+                    const errorText = await response.text();
+                    console.error('Server error:', errorText);
                     alert('Error generating test cases. Please try again.');
                 }
             } catch (error) {
+                console.error('Network error:', error);
                 alert('Error generating test cases. Please try again.');
             } finally {
                 submitBtn.textContent = originalText;

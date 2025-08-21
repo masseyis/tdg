@@ -161,7 +161,7 @@ async def generate_ui(
 
     except Exception as e:
         return templates.TemplateResponse(
-            "index.html",
+            "app.html",
             {"request": request, "error": str(e)}
         )
 
@@ -172,7 +172,7 @@ async def not_found(request: Request, exc):
     if request.url.path.startswith("/api"):
         return {"error": "Not found"}, 404
     return templates.TemplateResponse(
-        "index.html",
+        "landing.html",
         {"request": request, "error": "Page not found"},
         status_code=404
     )
