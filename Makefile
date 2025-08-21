@@ -12,7 +12,7 @@ test-cov:
 	pytest --cov=app --cov-report=html --cov-report=term
 
 test-ci:
-	pytest -v --cov=app --cov-report=xml
+	pytest tests/ -v --cov=app --cov-report=xml
 	flake8 app/ --max-line-length=88 --extend-ignore=E203,W503,E501,E302,E303,E304,E305,E114,E116,E117,E261,E262,E266,F401,F541,E301,E127,W291 || echo "Linting issues found but continuing..."
 	black --check app/ || echo "Black formatting issues found but continuing..."
 
