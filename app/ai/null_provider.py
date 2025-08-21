@@ -8,6 +8,7 @@ from app.utils.faker_utils import (
     generate_negative_value,
     set_seed
 )
+from app.ai.prompts import order_test_cases
 
 
 class NullProvider(AIProvider):
@@ -50,7 +51,10 @@ class NullProvider(AIProvider):
             case = self._generate_negative_case(endpoint, domain_hint, i)
             cases.append(case)
 
-        return cases
+        # Order test cases logically: CREATE → READ → UPDATE → DELETE
+        ordered_cases = order_test_cases(cases)
+
+        return ordered_cases
     def _generate_valid_case(
         self, endpoint: Any, domain_hint: str, index: int
     ) -> TestCase:

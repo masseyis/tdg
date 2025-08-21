@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpecMint - Mint test cases from your API spec</title>
+    <meta name="description" content="Generate realistic test cases and artifacts from OpenAPI specs. Get JUnit/REST Assured, Postman collections, WireMock stubs, and datasets.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                        'space-grotesk': ['Space Grotesk', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-gray-950 text-white">
+    <!-- Navigation -->
+    <nav class="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold font-space-grotesk text-teal-400">SpecMint</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="#product" class="text-gray-300 hover:text-white transition-colors">Product</a>
+                        <a href="#docs" class="text-gray-300 hover:text-white transition-colors">Docs</a>
+                        <a href="#pricing" class="text-gray-300 hover:text-white transition-colors">Pricing</a>
+                        <a href="https://github.com/masseyis/tdg" class="text-gray-300 hover:text-white transition-colors">GitHub</a>
+                    </div>
+                </div>
+                <a href="/app" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition-colors">Generate test data</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="pt-20 pb-16 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto text-center">
+            <h1 class="text-5xl md:text-6xl font-bold font-space-grotesk mb-6">
+                Mint test cases from your <span class="text-teal-400">API spec</span>
+            </h1>
+            <p class="text-xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
+                Upload your OpenAPI specification and get valid, boundary, and negative test cases plus runnable artifacts.
+                Generate JUnit tests, Postman collections, and realistic datasets in seconds.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+                <a href="/app" class="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-lg text-lg font-medium transition-colors">
+                    Generate test data
+                </a>
+                <a href="#docs" class="border border-gray-600 text-gray-300 hover:bg-gray-800 bg-transparent px-8 py-3 rounded-lg text-lg font-medium transition-colors">
+                    View docs
+                </a>
+            </div>
+
+            <!-- Trust Bar -->
+            <div class="flex items-center justify-center gap-8 text-sm text-gray-400">
+                <div class="flex items-center gap-2">
+                    <span>⭐</span>
+                    <span>Open Source</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span>✓</span>
+                    <span>Works with OpenAPI 3.0/3.1</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Grid -->
+    <section id="product" class="py-16 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-3xl font-bold font-space-grotesk text-center mb-12">
+                Everything you need for API testing
+            </h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:bg-gray-800/50 transition-colors">
+                    <h3 class="text-teal-400 font-space-grotesk font-semibold text-lg mb-3">Contract-true test cases</h3>
+                    <p class="text-gray-300">
+                        Generate valid, edge case, and negative test scenarios that perfectly match your API contract.
+                    </p>
+                </div>
+
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:bg-gray-800/50 transition-colors">
+                    <h3 class="text-teal-400 font-space-grotesk font-semibold text-lg mb-3">Multiple output formats</h3>
+                    <p class="text-gray-300">
+                        Get JUnit/REST Assured tests, Postman collections, WireMock stubs, JSON datasets, and more.
+                    </p>
+                </div>
+
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:bg-gray-800/50 transition-colors">
+                    <h3 class="text-teal-400 font-space-grotesk font-semibold text-lg mb-3">AI-powered generation</h3>
+                    <p class="text-gray-300">
+                        Uses AI to generate realistic, domain-relevant test data and comprehensive edge cases.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-16 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-3xl font-bold font-space-grotesk mb-6">Ready to mint your test cases?</h2>
+            <p class="text-xl text-gray-300 mb-8">
+                Upload your OpenAPI spec and get comprehensive test coverage in minutes.
+            </p>
+            <a href="/app" class="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-lg text-lg font-medium transition-colors">
+                Start generating now
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 py-8 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto text-center text-gray-400">
+            <p>&copy; 2024 SpecMint. Open source and free to use.</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,54 @@
+/* Import Tailwind CSS from CDN */
+@import url('https://cdn.tailwindcss.com');
+
+/* Custom fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+/* Custom CSS variables */
+:root {
+  --font-inter: 'Inter', sans-serif;
+  --font-space-grotesk: 'Space Grotesk', sans-serif;
+}
+
+/* Font classes */
+.font-inter {
+  font-family: var(--font-inter);
+}
+
+.font-space-grotesk {
+  font-family: var(--font-space-grotesk);
+}
+
+/* Custom styles */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+/* Dark mode styles */
+.dark {
+  color-scheme: dark;
+}
+
+/* Custom button styles */
+.btn-primary {
+  @apply bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition-colors;
+}
+
+.btn-secondary {
+  @apply border border-gray-600 text-gray-300 hover:bg-gray-800 bg-transparent px-4 py-2 rounded-lg transition-colors;
+}
+
+/* Card styles */
+.card {
+  @apply bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:bg-gray-800/50 transition-colors;
+}
+
+/* Input styles */
+.input {
+  @apply w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:border-teal-500 focus:outline-none;
+}
+
+/* Checkbox styles */
+.checkbox {
+  @apply w-4 h-4 text-teal-600 bg-gray-800 border-gray-700 rounded focus:ring-teal-500;
+}

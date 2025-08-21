@@ -84,7 +84,7 @@ class APITestRunner {{
      * @param {{Object}} oauthConfig - Optional OAuth configuration
      */
     constructor(baseUrl, apiKey = null, oauthConfig = null) {{
-        this.baseUrl = baseUrl.replace(/\/$/, '');
+        this.baseUrl = baseUrl.replace(/\\/$/, '');
         this.apiKey = apiKey;
         this.oauthConfig = oauthConfig;
         this.testData = null;

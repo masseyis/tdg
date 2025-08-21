@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpecMint - Generate Test Cases</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                        'space-grotesk': ['Space Grotesk', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-gray-950 text-white">
+    <!-- Navigation -->
+    <nav class="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold font-space-grotesk text-teal-400">SpecMint</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="/#product" class="text-gray-300 hover:text-white transition-colors">Product</a>
+                        <a href="/#docs" class="text-gray-300 hover:text-white transition-colors">Docs</a>
+                        <a href="https://github.com/masseyis/tdg" class="text-gray-300 hover:text-white transition-colors">GitHub</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold font-space-grotesk mb-4">Generate Test Cases</h1>
+            <p class="text-gray-300">Upload your OpenAPI specification and get comprehensive test coverage</p>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+            <!-- File Upload Section -->
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <h2 class="text-xl font-semibold font-space-grotesk mb-4">Upload OpenAPI Specification</h2>
+                
+                <div class="border-2 border-dashed border-gray-700 rounded-lg p-8 text-center hover:border-teal-500 transition-colors" id="dropZone">
+                    <div class="space-y-4">
+                        <div class="text-4xl">📄</div>
+                        <div>
+                            <p class="text-lg font-medium">Drop your OpenAPI spec here</p>
+                            <p class="text-gray-400">or click to browse</p>
+                        </div>
+                        <p class="text-sm text-gray-500">Supports .json, .yaml, .yml files</p>
+                    </div>
+                    <input type="file" name="file" id="fileInput" accept=".json,.yaml,.yml" class="hidden">
+                </div>
+                
+                <div class="mt-4">
+                    <label for="specUrl" class="block text-sm font-medium text-gray-300 mb-2">Or provide a URL</label>
+                    <input type="url" name="specUrl" id="specUrl" placeholder="https://example.com/openapi.json" 
+                           class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:border-teal-500 focus:outline-none">
+                </div>
+            </div>
+
+            <!-- Configuration Section -->
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <h2 class="text-xl font-semibold font-space-grotesk mb-4">Configuration</h2>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="casesPerEndpoint" class="block text-sm font-medium text-gray-300 mb-2">Test Cases per Endpoint</label>
+                        <select name="casesPerEndpoint" id="casesPerEndpoint" 
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-teal-500 focus:outline-none">
+                            <option value="5">5 cases</option>
+                            <option value="10" selected>10 cases</option>
+                            <option value="15">15 cases</option>
+                            <option value="20">20 cases</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="domainHint" class="block text-sm font-medium text-gray-300 mb-2">Domain Hint</label>
+                        <select name="domainHint" id="domainHint" 
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-teal-500 focus:outline-none">
+                            <option value="">General</option>
+                            <option value="petstore">Pet Store</option>
+                            <option value="ecommerce">E-commerce</option>
+                            <option value="user">User Management</option>
+                            <option value="financial">Financial</option>
+                            <option value="healthcare">Healthcare</option>
+                            <option value="social">Social Media</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label class="block text-sm font-medium text-gray-300 mb-3">Output Formats</label>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="outputs" value="junit" checked 
+                                   class="w-4 h-4 text-teal-600 bg-gray-800 border-gray-700 rounded focus:ring-teal-500">
+                            <span class="text-gray-300">Java (JUnit)</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="outputs" value="python" checked 
+                                   class="w-4 h-4 text-teal-600 bg-gray-800 border-gray-700 rounded focus:ring-teal-500">
+                            <span class="text-gray-300">Python</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="outputs" value="nodejs" checked 
+                                   class="w-4 h-4 text-teal-600 bg-gray-800 border-gray-700 rounded focus:ring-teal-500">
+                            <span class="text-gray-300">Node.js</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="outputs" value="postman" checked 
+                                   class="w-4 h-4 text-teal-600 bg-gray-800 border-gray-700 rounded focus:ring-teal-500">
+                            <span class="text-gray-300">Postman</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="outputs" value="wiremock" 
+                                   class="w-4 h-4 text-teal-600 bg-gray-800 border-gray-700 rounded focus:ring-teal-500">
+                            <span class="text-gray-300">WireMock</span>
+                        </label>
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="outputs" value="csv" 
+                                   class="w-4 h-4 text-teal-600 bg-gray-800 border-gray-700 rounded focus:ring-teal-500">
+                            <span class="text-gray-300">CSV</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generate Button -->
+            <div class="text-center">
+                <button type="submit" 
+                        class="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-lg text-lg font-medium transition-colors">
+                    Generate Test Cases
+                </button>
+            </div>
+        </form>
+
+        <!-- Results Section (hidden by default) -->
+        <div id="results" class="mt-8 bg-gray-900 border border-gray-800 rounded-2xl p-6 hidden">
+            <h2 class="text-xl font-semibold font-space-grotesk mb-4">Generated Test Cases</h2>
+            <div class="text-center">
+                <div class="text-4xl mb-4">✅</div>
+                <p class="text-gray-300 mb-4">Your test cases have been generated successfully!</p>
+                <a href="#" id="downloadLink" 
+                   class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-lg transition-colors">
+                    Download ZIP
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // File upload handling
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-teal-500');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-teal-500');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-teal-500');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                updateFileName(files[0].name);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                updateFileName(e.target.files[0].name);
+            }
+        });
+        
+        function updateFileName(name) {
+            const dropZone = document.getElementById('dropZone');
+            dropZone.innerHTML = `
+                <div class="space-y-4">
+                    <div class="text-4xl">📄</div>
+                    <div>
+                        <p class="text-lg font-medium text-teal-400">${name}</p>
+                        <p class="text-gray-400">File selected</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Form submission handling
+        document.querySelector('form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            
+            submitBtn.textContent = 'Generating...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'test-artifacts.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    // Show results
+                    document.getElementById('results').classList.remove('hidden');
+                } else {
+                    alert('Error generating test cases. Please try again.');
+                }
+            } catch (error) {
+                alert('Error generating test cases. Please try again.');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

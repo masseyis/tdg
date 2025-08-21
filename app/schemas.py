@@ -8,8 +8,8 @@ class GenerateRequest(BaseModel):
     openapi: str = Field(..., description="Base64 encoded spec content or URL")
     casesPerEndpoint: int = Field(10, ge=1, le=100)
     outputs: List[str] = Field(
-        default=["junit", "postman", "json"],
-        description="Output formats: junit, postman, wiremock, json, csv, sql"
+        default=["junit", "python", "nodejs", "postman"],
+        description="Output formats: junit, python, nodejs, postman, wiremock, json, csv, sql"
     )
     domainHint: Optional[str] = Field(None, description="Domain context hint")
     seed: Optional[int] = Field(None, description="Random seed for reproducibility")
@@ -17,7 +17,7 @@ class GenerateRequest(BaseModel):
     @validator("outputs")
 
     def validate_outputs(cls, v):
-        valid = {"junit", "postman", "wiremock", "json", "csv", "sql"}
+        valid = {"junit", "python", "nodejs", "postman", "wiremock", "json", "csv", "sql"}
         invalid = set(v) - valid
         if invalid:
             raise ValueError(f"Invalid outputs: {invalid}")

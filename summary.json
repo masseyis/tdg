@@ -1,0 +1,15 @@
+{
+  "generated_at": "2025-08-21T14:49:12.240955",
+  "endpoints": 20,
+  "cases_per_endpoint": 5,
+  "outputs": [
+    "endpoint_count",
+    "cases_per_endpoint",
+    "total_cases",
+    "junit",
+    "postman",
+    "python",
+    "nodejs"
+  ],
+  "total_cases": 100
+}

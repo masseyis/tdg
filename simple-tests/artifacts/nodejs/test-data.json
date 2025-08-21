@@ -1,0 +1,106 @@
+{
+  "metadata": {
+    "generated_at": "2024-01-01T00:00:00Z",
+    "generator": "Test Data Generator MVP",
+    "version": "1.0.0",
+    "total_cases": 6
+  },
+  "test_cases": [
+    {
+      "id": "Valid_listVersionsv2_0",
+      "name": "Valid_listVersionsv2_0",
+      "description": "Valid test case for GET /",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "query_params": {},
+      "path_params": {},
+      "body": null,
+      "expected_status": 200,
+      "expected_response": null,
+      "test_type": "valid"
+    },
+    {
+      "id": "Boundary_listVersionsv2_0",
+      "name": "Boundary_listVersionsv2_0",
+      "description": "Boundary test case for GET /",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "query_params": {},
+      "path_params": {},
+      "body": null,
+      "expected_status": 200,
+      "expected_response": null,
+      "test_type": "boundary"
+    },
+    {
+      "id": "Negative_listVersionsv2_0",
+      "name": "Negative_listVersionsv2_0",
+      "description": "Negative test case for GET /",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "query_params": {},
+      "path_params": {},
+      "body": null,
+      "expected_status": 401,
+      "expected_response": null,
+      "test_type": "negative"
+    },
+    {
+      "id": "Valid_getVersionDetailsv2_0",
+      "name": "Valid_getVersionDetailsv2_0",
+      "description": "Valid test case for GET /v2",
+      "method": "GET",
+      "path": "/v2",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "query_params": {},
+      "path_params": {},
+      "body": null,
+      "expected_status": 200,
+      "expected_response": null,
+      "test_type": "valid"
+    },
+    {
+      "id": "Boundary_getVersionDetailsv2_0",
+      "name": "Boundary_getVersionDetailsv2_0",
+      "description": "Boundary test case for GET /v2",
+      "method": "GET",
+      "path": "/v2",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "query_params": {},
+      "path_params": {},
+      "body": null,
+      "expected_status": 200,
+      "expected_response": null,
+      "test_type": "boundary"
+    },
+    {
+      "id": "Negative_getVersionDetailsv2_0",
+      "name": "Negative_getVersionDetailsv2_0",
+      "description": "Negative test case for GET /v2",
+      "method": "GET",
+      "path": "/v2",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "query_params": {},
+      "path_params": {},
+      "body": null,
+      "expected_status": 401,
+      "expected_response": null,
+      "test_type": "negative"
+    }
+  ]
+}

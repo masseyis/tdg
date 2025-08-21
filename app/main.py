@@ -36,8 +36,20 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    """Render main UI"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    """Render landing page"""
+    return templates.TemplateResponse("landing.html", {"request": request})
+
+
+@app.get("/app", response_class=HTMLResponse)
+async def app_page(request: Request):
+    """Render app page"""
+    return templates.TemplateResponse("app.html", {"request": request})
+
+
+@app.post("/app", response_class=HTMLResponse)
+async def app_page_post(request: Request):
+    """Handle form submission from app page"""
+    return templates.TemplateResponse("app.html", {"request": request})
 
 
 @app.get("/health")

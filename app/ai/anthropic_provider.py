@@ -3,7 +3,7 @@ import json
 import logging
 from typing import List, Dict, Any
 from app.ai.base import AIProvider, TestCase
-from app.ai.prompts import get_test_generation_prompt
+from app.ai.prompts import get_test_generation_prompt, order_test_cases
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,10 @@ class AnthropicProvider(AIProvider):
                 )
                 cases.append(case)
 
-            return cases
+            # Order test cases logically: CREATE → READ → UPDATE → DELETE
+            ordered_cases = order_test_cases(cases)
+
+            return ordered_cases
 
         except Exception as e:
             logger.error(f"Anthropic generation failed: {e}")
