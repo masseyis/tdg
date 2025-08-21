@@ -7,11 +7,12 @@ A powerful OpenAPI test case generator that creates comprehensive test suites fo
 - **OpenAPI Specification Processing**: Loads and normalizes OpenAPI/Swagger specifications
 - **AI-Powered Test Generation**: Uses AI to generate realistic test cases
 - **Multiple Output Formats**: 
-  - JUnit/REST Assured (Java)
+  - JUnit/REST Assured (Java) with shared JSON test data
   - Postman Collections
-  - JSON
+  - JSON (shareable across testing frameworks)
   - CSV
   - SQL
+- **Cross-Platform Test Data**: Shared JSON format works with Java, Python, Node.js, Postman, and more
 - **OAuth2 Support**: Full OAuth2 authentication framework with password grant, client credentials, and authorization code flows
 - **API Key Authentication**: Support for API key authentication
 - **Complete Maven Projects**: Generates ready-to-run Maven projects with all dependencies
@@ -255,6 +256,62 @@ Run the test suite:
 
 ```bash
 make test
+```
+
+## 🔄 Cross-Platform Test Data
+
+The generated test data is now available in a shared JSON format (`test-data.json`) that can be used across multiple testing frameworks:
+
+### Java/JUnit (Generated)
+The JUnit tests automatically load test data from `src/test/resources/test-data.json`:
+```bash
+mvn test -DbaseUrl=http://localhost:8080
+```
+
+### Python
+Use the provided Python example to run tests:
+```bash
+python examples/python_test_example.py test-data.json http://localhost:8080 your-api-key
+```
+
+### Node.js/JavaScript
+Use the provided JavaScript example:
+```bash
+npm install axios  # Install dependencies first
+node examples/javascript_test_example.js test-data.json http://localhost:8080 your-api-key
+```
+
+### Postman Collection
+Convert the JSON data to a Postman collection:
+```bash
+python examples/postman_from_json.py test-data.json http://localhost:8080 my-collection.json
+```
+
+### JSON Format
+The shared test data follows this structure:
+```json
+{
+  "metadata": {
+    "generated_at": "2024-01-01T00:00:00Z",
+    "generator": "Test Data Generator MVP",
+    "version": "1.0.0",
+    "total_cases": 10
+  },
+  "test_cases": [
+    {
+      "id": "test_get_user_valid_0",
+      "name": "Valid GET /user test",
+      "method": "GET",
+      "path": "/user/{id}",
+      "headers": {"Accept": "application/json"},
+      "query_params": {"include": "profile"},
+      "path_params": {"id": "123"},
+      "body": null,
+      "expected_status": 200,
+      "test_type": "valid"
+    }
+  ]
+}
 ```
 
 ## 🛠️ Development

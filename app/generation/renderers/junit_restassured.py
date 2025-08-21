@@ -24,6 +24,9 @@ def render(cases: List[Any], api: Any, flows: List[Any] = None) -> Dict[str, str
     files["pom.xml"] = _generate_pom_xml(api)
     files[".gitignore"] = _generate_gitignore()
     files["README.md"] = _generate_readme(api)
+    
+    # Generate shared test data JSON file
+    files["src/test/resources/test-data.json"] = _generate_test_data_json(cases)
 
     # Generate comprehensive test flow
     files["src/test/java/generated/ComprehensiveTestFlow.java"] = _generate_comprehensive_test_flow(api)
@@ -67,8 +70,12 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Map;
+import java.util.List;
 import java.util.stream.Stream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
@@ -76,9 +83,43 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class {class_name} extends BaseTest {{
 
+    private static JsonNode testData;
+    private static ObjectMapper objectMapper = new ObjectMapper();
+
+    @BeforeAll
+    static void loadTestData() throws Exception {{
+        InputStream inputStream = {class_name}.class.getClassLoader()
+            .getResourceAsStream("test-data.json");
+        if (inputStream == null) {{
+            throw new RuntimeException("test-data.json not found in resources");
+        }}
+        String json = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        testData = objectMapper.readTree(json);
+    }}
+
     @ParameterizedTest(name = "{{0}}")
     @MethodSource("provideTestCases")
-    void testEndpoint(String testName, String method, String path, String body, String queryParams, String pathParams, int expectedStatus) {{
+    void testEndpoint(String testCaseId) {{
+        // Find the test case by ID
+        JsonNode testCase = null;
+        for (JsonNode tc : testData.get("test_cases")) {{
+            if (testCaseId.equals(tc.get("id").asText())) {{
+                testCase = tc;
+                break;
+            }}
+        }}
+        
+        if (testCase == null) {{
+            fail("Test case not found: " + testCaseId);
+            return;
+        }}
+        
+        String method = testCase.get("method").asText();
+        String path = testCase.get("path").asText();
+        JsonNode bodyNode = testCase.get("body");
+        JsonNode queryParamsNode = testCase.get("query_params");
+        JsonNode pathParamsNode = testCase.get("path_params");
+        int expectedStatus = testCase.get("expected_status").asInt();
         var request = given()
             .contentType(ContentType.JSON)
             .accept(ContentType.JSON);
@@ -89,34 +130,31 @@ public class {class_name} extends BaseTest {{
             request.header(header.getKey(), header.getValue());
         }}
 
+        // Add custom headers from test data
+        JsonNode headersNode = testCase.get("headers");
+        if (headersNode != null && headersNode.isObject()) {{
+            headersNode.fields().forEachRemaining(entry -> {{
+                request.header(entry.getKey(), entry.getValue().asText());
+            }});
+        }}
+
         // Add query parameters if present
-        if (queryParams != null && !queryParams.isEmpty()) {{
-            try {{
-                ObjectMapper mapper = new ObjectMapper();
-                Map<String, Object> params = mapper.readValue(queryParams, Map.class);
-                for (Map.Entry<String, Object> param : params.entrySet()) {{
-                    request.queryParam(param.getKey(), param.getValue());
-                }}
-            }} catch (Exception e) {{
-                System.err.println("Failed to parse query parameters: " + e.getMessage());
-            }}
+        if (queryParamsNode != null && queryParamsNode.isObject()) {{
+            queryParamsNode.fields().forEachRemaining(entry -> {{
+                request.queryParam(entry.getKey(), entry.getValue().asText());
+            }});
         }}
 
         // Add path parameters if present
-        if (pathParams != null && !pathParams.isEmpty()) {{
-            try {{
-                ObjectMapper mapper = new ObjectMapper();
-                Map<String, Object> params = mapper.readValue(pathParams, Map.class);
-                for (Map.Entry<String, Object> param : params.entrySet()) {{
-                    request.pathParam(param.getKey(), param.getValue());
-                }}
-            }} catch (Exception e) {{
-                System.err.println("Failed to parse path parameters: " + e.getMessage());
-            }}
+        if (pathParamsNode != null && pathParamsNode.isObject()) {{
+            pathParamsNode.fields().forEachRemaining(entry -> {{
+                request.pathParam(entry.getKey(), entry.getValue().asText());
+            }});
         }}
 
-        if (body != null) {{
-            request.body(body);
+        // Add body if present
+        if (bodyNode != null && !bodyNode.isNull()) {{
+            request.body(bodyNode.toString());
         }}
 
         var response = request.request(method, path);
@@ -133,28 +171,46 @@ public class {class_name} extends BaseTest {{
 }}"""
 
 
+def _generate_test_data_json(cases: List[Any]) -> str:
+    """Generate shared test data as JSON file"""
+    test_data = {
+        "metadata": {
+            "generated_at": "2024-01-01T00:00:00Z",
+            "generator": "Test Data Generator MVP",
+            "version": "1.0.0",
+            "total_cases": len(cases)
+        },
+        "test_cases": []
+    }
+    
+    for case in cases:
+        test_case = {
+            "id": case.name,
+            "name": case.name,
+            "description": case.description,
+            "method": case.method,
+            "path": case.path,
+            "headers": case.headers or {},
+            "query_params": case.query_params or {},
+            "path_params": case.path_params or {},
+            "body": case.body,
+            "expected_status": case.expected_status,
+            "expected_response": case.expected_response,
+            "test_type": case.test_type
+        }
+        test_data["test_cases"].append(test_case)
+    
+    return json.dumps(test_data, indent=2)
+
+
 def _generate_test_cases(cases: List[Any]) -> str:
-    """Generate test case arguments"""
+    """Generate test case arguments that read from JSON"""
+    # Since we're now using JSON data, we need fewer inline arguments
+    # The test method will load data from src/test/resources/test-data.json
     lines = []
     for case in cases:
-        body_str = "null"
-        if case.body:
-            json_body = json.dumps(case.body).replace('"', '\\"')
-            body_str = f'"{json_body}"'
-
-        # Handle query parameters
-        query_params_str = "null"
-        if case.query_params:
-            json_query = json.dumps(case.query_params).replace('"', '\\"')
-            query_params_str = f'"{json_query}"'
-
-        # Handle path parameters
-        path_params_str = "null"
-        if case.path_params:
-            json_path = json.dumps(case.path_params).replace('"', '\\"')
-            path_params_str = f'"{json_path}"'
-
-        line = f'            Arguments.of("{case.name}", "{case.method}", "{case.path}", {body_str}, {query_params_str}, {path_params_str}, {case.expected_status})'
+        # Just pass the test case ID, the rest will be loaded from JSON
+        line = f'            Arguments.of("{case.name}")'
         lines.append(line)
 
     return ",\n".join(lines)
