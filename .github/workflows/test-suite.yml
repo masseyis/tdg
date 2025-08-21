@@ -67,15 +67,15 @@ jobs:
         
     - name: Test AI provider detection
       run: |
-        python test_ai_providers.py
+        python -m pytest tests/test_ai_providers.py -v
         
     - name: Test enhanced generation
       run: |
-        python test_enhanced_ai.py
+        python -m pytest tests/test_enhanced_ai.py -v
         
     - name: Test domain data generation
       run: |
-        python test_domain_data.py
+        python -m pytest tests/test_domain_data.py -v
         
   integration-tests:
     runs-on: ubuntu-latest

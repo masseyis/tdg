@@ -19,7 +19,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.12'
         
     - name: Install dependencies
       run: |
@@ -38,4 +38,4 @@ jobs:
     - name: Health check
       run: |
         sleep 30
-        curl -f ${{ secrets.FLY_APP_URL }}/health || exit 1
+        curl -f https://tdg-mvp.fly.dev/health || exit 1
