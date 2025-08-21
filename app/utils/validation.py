@@ -10,11 +10,11 @@ logger = logging.getLogger(__name__)
 def validate_against_schema(data: Any, schema: Dict[str, Any]) -> bool:
     """
     Validate data against JSON schema
-    
+
     Args:
         data: Data to validate
         schema: JSON schema
-        
+
     Returns:
         True if valid, False otherwise
     """
@@ -29,37 +29,37 @@ def validate_against_schema(data: Any, schema: Dict[str, Any]) -> bool:
 def fix_data_for_schema(data: Any, schema: Dict[str, Any]) -> Any:
     """
     Attempt to fix data to match schema
-    
+
     Args:
         data: Data to fix
         schema: Target schema
-        
+
     Returns:
         Fixed data
     """
     if not schema:
         return data
-    
+
     schema_type = schema.get("type")
-    
+
     # Handle null
     if data is None:
         if schema_type == "null" or "null" in schema.get("type", []):
             return None
         return get_default_for_type(schema_type)
-    
+
     # Handle type coercion
     if schema_type == "string":
         return str(data)
     elif schema_type == "number":
         try:
             return float(data)
-        except:
+        except Exception:
             return 0.0
     elif schema_type == "integer":
         try:
             return int(data)
-        except:
+        except Exception:
             return 0
     elif schema_type == "boolean":
         return bool(data)
@@ -71,25 +71,25 @@ def fix_data_for_schema(data: Any, schema: Dict[str, Any]) -> Any:
     elif schema_type == "object":
         if not isinstance(data, dict):
             data = {}
-        
+
         fixed = {}
         properties = schema.get("properties", {})
         required = schema.get("required", [])
-        
+
         # Fix existing properties
         for key, value in data.items():
             if key in properties:
                 fixed[key] = fix_data_for_schema(value, properties[key])
             else:
                 fixed[key] = value
-        
+
         # Add missing required properties
         for prop in required:
             if prop not in fixed and prop in properties:
                 fixed[prop] = get_default_for_type(properties[prop].get("type"))
-        
+
         return fixed
-    
+
     return data
 
 
@@ -112,5 +112,5 @@ def is_valid_json(text: str) -> bool:
     try:
         json.loads(text)
         return True
-    except:
+    except Exception:
         return False

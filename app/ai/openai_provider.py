@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 class OpenAIProvider(AIProvider):
     """OpenAI provider for test case generation"""
-    
+
+
     def __init__(self):
         self.client = None
         if self.is_available():
@@ -19,11 +20,12 @@ class OpenAIProvider(AIProvider):
                 self.client = openai.OpenAI(api_key=settings.openai_api_key)
             except ImportError:
                 logger.warning("OpenAI library not installed")
-    
+
+
     def is_available(self) -> bool:
         """Check if OpenAI API key is configured"""
         return bool(settings.openai_api_key)
-    
+
     async def generate_cases(
         self,
         endpoint: Any,
@@ -34,10 +36,10 @@ class OpenAIProvider(AIProvider):
             # Fallback to null provider
             from app.ai.null_provider import NullProvider
             return await NullProvider().generate_cases(endpoint, options)
-        
+
         try:
             prompt = get_test_generation_prompt(endpoint, options)
-            
+
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -47,10 +49,10 @@ class OpenAIProvider(AIProvider):
                 temperature=0.7,
                 response_format={"type": "json_object"}
             )
-            
+
             content = response.choices[0].message.content
             data = json.loads(content)
-            
+
             # Parse response into TestCase objects
             cases = []
             for case_data in data.get("cases", []):
@@ -68,9 +70,9 @@ class OpenAIProvider(AIProvider):
                     test_type=case_data.get("test_type", "valid")
                 )
                 cases.append(case)
-            
+
             return cases
-            
+
         except Exception as e:
             logger.error(f"OpenAI generation failed: {e}")
             # Fallback to null provider

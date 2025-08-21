@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 def render(cases: List[Any], api: Any, flows: List[Any] = None) -> Dict[str, Any]:
     """
     Render Postman collection
-    
+
     Returns:
         Postman collection v2.1 format
     """
@@ -32,7 +32,7 @@ def render(cases: List[Any], api: Any, flows: List[Any] = None) -> Dict[str, Any
             }
         ]
     }
-    
+
     # Group cases by endpoint
     endpoint_groups = {}
     for case in cases:
@@ -42,27 +42,27 @@ def render(cases: List[Any], api: Any, flows: List[Any] = None) -> Dict[str, Any
                 "name": key,
                 "item": []
             }
-        
+
         # Create request item
         item = _create_request_item(case)
         endpoint_groups[key]["item"].append(item)
-    
+
     # Add endpoint groups to collection
     collection["item"].extend(endpoint_groups.values())
-    
+
     # Add flows as separate folder
     if flows:
         flow_folder = {
             "name": "Test Flows",
             "item": []
         }
-        
+
         for flow in flows:
             flow_item = _create_flow_item(flow)
             flow_folder["item"].append(flow_item)
-        
+
         collection["item"].append(flow_folder)
-    
+
     return collection
 
 
@@ -75,28 +75,28 @@ def _create_request_item(case: Any) -> Dict[str, Any]:
         "path": case.path.strip("/").split("/"),
         "query": []
     }
-    
+
     # Add query parameters
     for key, value in case.query_params.items():
         url["query"].append({
             "key": key,
             "value": str(value)
         })
-    
+
     # Build request
     request = {
         "method": case.method,
         "header": [],
         "url": url
     }
-    
+
     # Add headers
     for key, value in case.headers.items():
         request["header"].append({
             "key": key,
             "value": value
         })
-    
+
     # Add body if present
     if case.body:
         request["body"] = {
@@ -108,7 +108,7 @@ def _create_request_item(case: Any) -> Dict[str, Any]:
                 }
             }
         }
-    
+
     # Create test script
     test_script = f"""
 pm.test("Status code is {case.expected_status}", function () {{
@@ -123,7 +123,7 @@ if (pm.response.code === 200 || pm.response.code === 201) {{
     pm.test("Response has valid JSON", function () {{
         pm.response.to.be.json;
     }});
-    
+
     // Store ID if present for chaining
     var jsonData = pm.response.json();
     if (jsonData.id) {{
@@ -131,7 +131,7 @@ if (pm.response.code === 200 || pm.response.code === 201) {{
     }}
 }}
 """
-    
+
     return {
         "name": case.name,
         "request": request,
@@ -148,6 +148,7 @@ if (pm.response.code === 200 || pm.response.code === 201) {{
     }
 
 
+
 def _create_flow_item(flow: Any) -> Dict[str, Any]:
     """Create Postman flow item"""
     flow_item = {
@@ -155,13 +156,13 @@ def _create_flow_item(flow: Any) -> Dict[str, Any]:
         "description": flow.description,
         "item": []
     }
-    
+
     for step in flow.steps:
         # Build URL with variable substitution
         url_path = step.path
         for var in flow.variables:
             url_path = url_path.replace(f"${{{var}}}", f"{{{{lastCreatedId}}}}")
-        
+
         request = {
             "name": step.name,
             "request": {
@@ -176,14 +177,14 @@ def _create_flow_item(flow: Any) -> Dict[str, Any]:
                 }
             }
         }
-        
+
         if step.body:
             request["request"]["body"] = {
                 "mode": "raw",
                 "raw": json.dumps(step.body, indent=2),
                 "options": {"raw": {"language": "json"}}
             }
-        
+
         flow_item["item"].append(request)
-    
+
     return flow_item

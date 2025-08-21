@@ -8,14 +8,13 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-
 async def load_openapi_spec(source: str) -> Dict[str, Any]:
     """
     Load OpenAPI spec from base64 content or URL
-    
+
     Args:
         source: Base64 encoded content or URL
-        
+
     Returns:
         Parsed OpenAPI specification
     """
@@ -23,7 +22,7 @@ async def load_openapi_spec(source: str) -> Dict[str, Any]:
         # Try URL first
         if source.startswith(("http://", "https://")):
             return await load_from_url(source)
-        
+
         # Try base64 decode
         try:
             decoded = base64.b64decode(source)
@@ -32,11 +31,10 @@ async def load_openapi_spec(source: str) -> Dict[str, Any]:
         except Exception:
             # Maybe it's raw content
             return parse_spec_content(source)
-            
+
     except Exception as e:
         logger.error(f"Failed to load OpenAPI spec: {e}")
         raise ValueError(f"Invalid OpenAPI source: {e}")
-
 
 async def load_from_url(url: str) -> Dict[str, Any]:
     """Load OpenAPI spec from URL"""
@@ -54,7 +52,7 @@ def parse_spec_content(content: str) -> Dict[str, Any]:
         return json.loads(content)
     except json.JSONDecodeError:
         pass
-    
+
     # Try YAML
     try:
         return yaml.safe_load(content)

@@ -6,17 +6,17 @@ from typing import Dict, Any
 def get_test_generation_prompt(endpoint: Any, options: Dict[str, Any]) -> str:
     """
     Generate prompt for test case generation
-    
+
     Args:
         endpoint: Normalized endpoint
         options: Generation options
-        
+
     Returns:
         Formatted prompt
     """
     count = options.get("count", 10)
     domain_hint = options.get("domain_hint", "")
-    
+
     # Build endpoint description
     endpoint_desc = {
         "method": endpoint.method,
@@ -35,7 +35,7 @@ def get_test_generation_prompt(endpoint: Any, options: Dict[str, Any]) -> str:
         "request_body": endpoint.request_body,
         "responses": endpoint.responses
     }
-    
+
     prompt = f"""Generate {count} test cases for the following API endpoint.
 
 Endpoint Details:
@@ -84,5 +84,5 @@ Example format:
 
 Generate the test cases now:
 """
-    
+
     return prompt

@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 class AnthropicProvider(AIProvider):
     """Anthropic provider for test case generation"""
-    
+
+
     def __init__(self):
         self.client = None
         if self.is_available():
@@ -20,11 +21,12 @@ class AnthropicProvider(AIProvider):
                 self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
             except ImportError:
                 logger.warning("Anthropic library not installed")
-    
+
+
     def is_available(self) -> bool:
         """Check if Anthropic API key is configured"""
         return bool(settings.anthropic_api_key)
-    
+
     async def generate_cases(
         self,
         endpoint: Any,
@@ -35,10 +37,10 @@ class AnthropicProvider(AIProvider):
             # Fallback to null provider
             from app.ai.null_provider import NullProvider
             return await NullProvider().generate_cases(endpoint, options)
-        
+
         try:
             prompt = get_test_generation_prompt(endpoint, options)
-            
+
             message = self.client.messages.create(
                 model="claude-3-haiku-20240307",
                 max_tokens=2000,
@@ -48,16 +50,16 @@ class AnthropicProvider(AIProvider):
                     {"role": "user", "content": prompt}
                 ]
             )
-            
+
             # Extract JSON from response
             content = message.content[0].text
             json_start = content.find("{")
             json_end = content.rfind("}") + 1
             if json_start >= 0 and json_end > json_start:
                 content = content[json_start:json_end]
-            
+
             data = json.loads(content)
-            
+
             # Parse response into TestCase objects
             cases = []
             for case_data in data.get("cases", []):
@@ -75,9 +77,9 @@ class AnthropicProvider(AIProvider):
                     test_type=case_data.get("test_type", "valid")
                 )
                 cases.append(case)
-            
+
             return cases
-            
+
         except Exception as e:
             logger.error(f"Anthropic generation failed: {e}")
             # Fallback to null provider

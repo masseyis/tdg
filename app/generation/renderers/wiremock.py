@@ -7,19 +7,19 @@ from typing import List, Dict, Any
 def render(cases: List[Any], api: Any) -> List[Dict[str, Any]]:
     """
     Render WireMock stub mappings
-    
+
     Returns:
         List of WireMock mapping objects
     """
     mappings = []
-    
+
     # Create stubs for valid cases only
     valid_cases = [c for c in cases if c.test_type == "valid"]
-    
+
     for case in valid_cases:
         mapping = _create_stub_mapping(case)
         mappings.append(mapping)
-    
+
     return mappings
 
 
@@ -39,7 +39,7 @@ def _create_stub_mapping(case: Any) -> Dict[str, Any]:
             }
         }
     }
-    
+
     # Add request body matcher if present
     if case.body:
         mapping["request"]["bodyPatterns"] = [
@@ -49,7 +49,7 @@ def _create_stub_mapping(case: Any) -> Dict[str, Any]:
                 "ignoreExtraElements": True
             }
         ]
-    
+
     # Add query parameter matchers
     if case.query_params:
         mapping["request"]["queryParameters"] = {}
@@ -57,7 +57,7 @@ def _create_stub_mapping(case: Any) -> Dict[str, Any]:
             mapping["request"]["queryParameters"][key] = {
                 "equalTo": str(value)
             }
-    
+
     # Add response body
     if case.expected_response:
         mapping["response"]["body"] = json.dumps(case.expected_response)
@@ -68,7 +68,7 @@ def _create_stub_mapping(case: Any) -> Dict[str, Any]:
             "status": "success",
             "message": f"Mocked response for {case.name}"
         })
-    
+
     return mapping
 
 

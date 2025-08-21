@@ -1,14 +1,13 @@
 """Multi-step flow composition utilities"""
 import re
-import json
 import logging
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
+
 class FlowStep:
     """Single step in a test flow"""
     name: str
@@ -19,8 +18,8 @@ class FlowStep:
     extract: Dict[str, str] = field(default_factory=dict)  # var_name: json_path
     assertions: List[Dict[str, Any]] = field(default_factory=list)
 
-
 @dataclass
+
 class TestFlow:
     """Multi-step test flow"""
     name: str
@@ -32,15 +31,15 @@ class TestFlow:
 def create_basic_flows(endpoints: List[Any]) -> List[TestFlow]:
     """
     Create basic multi-step flows from endpoints
-    
+
     Args:
         endpoints: List of normalized endpoints
-        
+
     Returns:
         List of test flows
     """
     flows = []
-    
+
     # Group endpoints by resource
     resource_groups = {}
     for endpoint in endpoints:
@@ -51,13 +50,13 @@ def create_basic_flows(endpoints: List[Any]) -> List[TestFlow]:
             if resource not in resource_groups:
                 resource_groups[resource] = []
             resource_groups[resource].append(endpoint)
-    
+
     # Create CRUD flows for each resource
     for resource, group_endpoints in resource_groups.items():
         flow = create_crud_flow(resource, group_endpoints)
         if flow and len(flow.steps) > 1:
             flows.append(flow)
-    
+
     return flows
 
 
@@ -67,7 +66,7 @@ def create_crud_flow(resource: str, endpoints: List[Any]) -> Optional[TestFlow]:
         name=f"{resource.title()} CRUD Flow",
         description=f"Create, Read, Update, Delete flow for {resource}"
     )
-    
+
     # Find POST endpoint (Create)
     post_endpoints = [e for e in endpoints if e.method == "POST" and "{" not in e.path]
     if post_endpoints:
@@ -80,7 +79,7 @@ def create_crud_flow(resource: str, endpoints: List[Any]) -> Optional[TestFlow]:
             extract={"created_id": "$.id", "created_name": "$.name"}
         )
         flow.steps.append(step)
-    
+
     # Find GET by ID endpoint (Read)
     get_endpoints = [e for e in endpoints if e.method == "GET" and "{id}" in e.path]
     if get_endpoints and flow.steps:
@@ -95,7 +94,7 @@ def create_crud_flow(resource: str, endpoints: List[Any]) -> Optional[TestFlow]:
             ]
         )
         flow.steps.append(step)
-    
+
     # Find PUT/PATCH endpoint (Update)
     update_endpoints = [e for e in endpoints if e.method in ["PUT", "PATCH"] and "{id}" in e.path]
     if update_endpoints and flow.steps:
@@ -107,7 +106,7 @@ def create_crud_flow(resource: str, endpoints: List[Any]) -> Optional[TestFlow]:
             body={"name": f"Updated {resource}", "description": "Updated by test flow"}
         )
         flow.steps.append(step)
-    
+
     # Find DELETE endpoint
     delete_endpoints = [e for e in endpoints if e.method == "DELETE" and "{id}" in e.path]
     if delete_endpoints and flow.steps:
@@ -121,49 +120,50 @@ def create_crud_flow(resource: str, endpoints: List[Any]) -> Optional[TestFlow]:
             ]
         )
         flow.steps.append(step)
-    
+
     return flow if len(flow.steps) > 1 else None
 
 
 def resolve_variables(text: str, variables: Dict[str, Any]) -> str:
     """
     Replace ${var_name} with actual values
-    
+
     Args:
         text: Text with variable references
         variables: Variable values
-        
+
     Returns:
         Text with variables resolved
     """
+
     def replacer(match):
         var_name = match.group(1)
         return str(variables.get(var_name, match.group(0)))
-    
+
     return re.sub(r'\$\{([^}]+)\}', replacer, text)
 
 
 def extract_from_response(response: Dict[str, Any], json_path: str) -> Any:
     """
     Extract value from response using simple JSON path
-    
+
     Args:
         response: Response data
         json_path: JSON path (e.g., $.data.id)
-        
+
     Returns:
         Extracted value
     """
     if not json_path.startswith("$"):
         return None
-    
+
     path_parts = json_path[1:].strip(".").split(".")
     current = response
-    
+
     for part in path_parts:
         if not part:
             continue
-        
+
         # Handle array index
         if "[" in part and "]" in part:
             field, index = part.split("[")
@@ -171,8 +171,8 @@ def extract_from_response(response: Dict[str, Any], json_path: str) -> Any:
             current = current.get(field, [])[index]
         else:
             current = current.get(part)
-        
+
         if current is None:
             break
-    
+
     return current

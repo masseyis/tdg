@@ -13,8 +13,9 @@ class GenerateRequest(BaseModel):
     )
     domainHint: Optional[str] = Field(None, description="Domain context hint")
     seed: Optional[int] = Field(None, description="Random seed for reproducibility")
-    
+
     @validator("outputs")
+
     def validate_outputs(cls, v):
         valid = {"junit", "postman", "wiremock", "json", "csv", "sql"}
         invalid = set(v) - valid

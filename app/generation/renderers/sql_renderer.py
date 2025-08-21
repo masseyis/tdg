@@ -1,17 +1,17 @@
 """SQL renderer for test data"""
-from typing import List, Any
 import json
+from typing import List, Any
 
 
 def render(cases: List[Any], table_name: str = "test_data") -> str:
     """
     Render test cases as SQL INSERT statements
-    
+
     Returns:
         SQL string
     """
     sql_lines = []
-    
+
     # Create table
     sql_lines.append(f"-- Test data for {table_name}")
     sql_lines.append(f"CREATE TABLE IF NOT EXISTS {table_name} (")
@@ -27,7 +27,7 @@ def render(cases: List[Any], table_name: str = "test_data") -> str:
     sql_lines.append("    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     sql_lines.append(");")
     sql_lines.append("")
-    
+
     # Insert statements
     sql_lines.append(f"-- Insert test cases")
     for case in cases:
@@ -40,7 +40,7 @@ def render(cases: List[Any], table_name: str = "test_data") -> str:
         path_params = json.dumps(case.path_params) if case.path_params else "null"
         expected_status = case.expected_status or 200
         test_type = case.test_type or "valid"
-        
+
         sql_lines.append(
             f"INSERT INTO {table_name} (test_name, method, path, body, query_params, path_params, expected_status, test_type) "
             f"VALUES ('{test_name}', '{method}', '{path}', '{body}', '{query_params}', '{path_params}', {expected_status}, '{test_type}');"

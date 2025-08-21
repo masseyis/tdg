@@ -1,17 +1,17 @@
 """JSON renderer for test data"""
-import json
+
 from typing import List, Any, Dict
 
 
 def render(cases: List[Any]) -> List[Dict[str, Any]]:
     """
     Render test cases as JSON
-    
+
     Returns:
         List of test case dictionaries
     """
     result = []
-    
+
     for case in cases:
         case_dict = {
             "name": case.name,
@@ -27,5 +27,5 @@ def render(cases: List[Any]) -> List[Dict[str, Any]]:
             "testType": case.test_type
         }
         result.append(case_dict)
-    
+
     return result

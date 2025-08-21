@@ -1,16 +1,17 @@
 """JUnit + REST Assured test renderer"""
+import json
 from typing import List, Dict, Any
 
 
 def render(cases: List[Any], api: Any, flows: List[Any] = None) -> Dict[str, str]:
     """
     Render complete Maven project with JUnit tests
-    
+
     Returns:
         Dictionary of filename -> content
     """
     files = {}
-    
+
     # Group cases by endpoint
     endpoint_cases = {}
     for case in cases:
@@ -18,32 +19,32 @@ def render(cases: List[Any], api: Any, flows: List[Any] = None) -> Dict[str, str
         if key not in endpoint_cases:
             endpoint_cases[key] = []
         endpoint_cases[key].append(case)
-    
+
     # Generate Maven project structure
     files["pom.xml"] = _generate_pom_xml(api)
     files[".gitignore"] = _generate_gitignore()
     files["README.md"] = _generate_readme(api)
-    
+
     # Generate comprehensive test flow
     files["src/test/java/generated/ComprehensiveTestFlow.java"] = _generate_comprehensive_test_flow(api)
-    
+
     # Generate OAuth2 test flow
     files["src/test/java/generated/OAuth2TestFlow.java"] = _generate_oauth2_test_flow(api)
-    
+
     # Generate test class for each endpoint
     for endpoint_key, endpoint_cases in endpoint_cases.items():
         class_name = _generate_class_name(endpoint_key)
         content = _generate_test_class(class_name, endpoint_cases, api)
         files[f"src/test/java/generated/{class_name}.java"] = content
-    
+
     # Generate flow tests if any
     if flows:
         flow_content = _generate_flow_tests(flows, api)
         files["src/test/java/generated/FlowTests.java"] = flow_content
-    
+
     # Add base test class
     files["src/test/java/generated/BaseTest.java"] = _generate_base_class()
-    
+
     return files
 
 
@@ -81,13 +82,13 @@ public class {class_name} extends BaseTest {{
         var request = given()
             .contentType(ContentType.JSON)
             .accept(ContentType.JSON);
-        
+
         // Add OAuth2 authentication headers if available
         Map<String, String> authHeaders = getAuthHeaders();
         for (Map.Entry<String, String> header : authHeaders.entrySet()) {{
             request.header(header.getKey(), header.getValue());
         }}
-        
+
         // Add query parameters if present
         if (queryParams != null && !queryParams.isEmpty()) {{
             try {{
@@ -100,7 +101,7 @@ public class {class_name} extends BaseTest {{
                 System.err.println("Failed to parse query parameters: " + e.getMessage());
             }}
         }}
-        
+
         // Add path parameters if present
         if (pathParams != null && !pathParams.isEmpty()) {{
             try {{
@@ -113,17 +114,17 @@ public class {class_name} extends BaseTest {{
                 System.err.println("Failed to parse path parameters: " + e.getMessage());
             }}
         }}
-        
+
         if (body != null) {{
             request.body(body);
         }}
-        
+
         var response = request.request(method, path);
-        
+
         response.then()
             .statusCode(expectedStatus);
     }}
-    
+
     static Stream<Arguments> provideTestCases() {{
         return Stream.of(
 {_generate_test_cases(cases)}
@@ -138,24 +139,21 @@ def _generate_test_cases(cases: List[Any]) -> str:
     for case in cases:
         body_str = "null"
         if case.body:
-            import json
-            body_str = f'"{json.dumps(case.body).replace('"', '\\"')}"'
-        
+                        body_str = f'"{json.dumps(case.body).replace('"', '\\"')}"'
+
         # Handle query parameters
         query_params_str = "null"
         if case.query_params:
-            import json
-            query_params_str = f'"{json.dumps(case.query_params).replace('"', '\\"')}"'
-        
+                        query_params_str = f'"{json.dumps(case.query_params).replace('"', '\\"')}"'
+
         # Handle path parameters
         path_params_str = "null"
         if case.path_params:
-            import json
-            path_params_str = f'"{json.dumps(case.path_params).replace('"', '\\"')}"'
-        
+                        path_params_str = f'"{json.dumps(case.path_params).replace('"', '\\"')}"'
+
         line = f'            Arguments.of("{case.name}", "{case.method}", "{case.path}", {body_str}, {query_params_str}, {path_params_str}, {case.expected_status})'
         lines.append(line)
-    
+
     return ",\n".join(lines)
 
 
@@ -179,7 +177,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class FlowTests extends BaseTest {
 
     private static String createdId;
-    
+
     @Test
     @Order(1)
     void testCreateFlow() {
@@ -191,11 +189,11 @@ public class FlowTests extends BaseTest {
         .then()
             .statusCode(201)
             .extract().response();
-        
+
         createdId = response.jsonPath().getString("id");
         assertNotNull(createdId);
     }
-    
+
     @Test
     @Order(2)
     void testReadFlow() {
@@ -212,7 +210,7 @@ public class FlowTests extends BaseTest {
 
 def _generate_comprehensive_test_flow(api: Any) -> str:
     """Generate comprehensive test flow that creates data, tests it, and cleans up"""
-    return f"""package generated;
+    return """package generated;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -231,12 +229,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ComprehensiveTestFlow extends BaseTest {{
-    
+
     private static String createdPetId;
     private static String createdOrderId;
     private static String createdUsername;
     private static final ObjectMapper mapper = new ObjectMapper();
-    
+
     @Test
     @Order(1)
     void testUserLogin() {{
@@ -250,10 +248,10 @@ public class ComprehensiveTestFlow extends BaseTest {{
         .then()
             .statusCode(200)
             .extract().response();
-        
+
         System.out.println("✅ User login test passed");
     }}
-    
+
     @Test
     @Order(2)
     void testCreateUser() {{
@@ -266,9 +264,9 @@ public class ComprehensiveTestFlow extends BaseTest {{
         userData.put("password", "testpass");
         userData.put("phone", "1234567890");
         userData.put("userStatus", 1);
-        
+
         createdUsername = (String) userData.get("username");
-        
+
         Response response = given()
             .contentType(ContentType.JSON)
             .body(userData)
@@ -277,10 +275,10 @@ public class ComprehensiveTestFlow extends BaseTest {{
         .then()
             .statusCode(200)
             .extract().response();
-        
+
         System.out.println("✅ Created user: " + createdUsername);
     }}
-    
+
     @Test
     @Order(3)
     void testGetUser() {{
@@ -292,10 +290,10 @@ public class ComprehensiveTestFlow extends BaseTest {{
         .then()
             .statusCode(200)
             .extract().response();
-        
+
         System.out.println("✅ Retrieved user: " + createdUsername);
     }}
-    
+
     @Test
     @Order(4)
     void testGetExistingOrder() {{
@@ -307,16 +305,16 @@ public class ComprehensiveTestFlow extends BaseTest {{
         .then()
             .statusCode(200)
             .extract().response();
-        
+
         System.out.println("✅ Retrieved existing order: 1");
     }}
-    
+
     @Test
     @Order(5)
     void testGetInventory() {{
         // Test inventory endpoint with API key
         Map<String, String> authHeaders = getAuthHeaders();
-        
+
         Response response = given()
             .contentType(ContentType.JSON)
             .headers(authHeaders)
@@ -325,10 +323,10 @@ public class ComprehensiveTestFlow extends BaseTest {{
         .then()
             .statusCode(200)
             .extract().response();
-        
+
         System.out.println("✅ Retrieved inventory");
     }}
-    
+
     @Test
     @Order(6)
     void testUserLogout() {{
@@ -340,10 +338,10 @@ public class ComprehensiveTestFlow extends BaseTest {{
         .then()
             .statusCode(200)
             .extract().response();
-        
+
         System.out.println("✅ User logout test passed");
     }}
-    
+
     @Test
     @Order(7)
     void testUpdateUser() {{
@@ -357,7 +355,7 @@ public class ComprehensiveTestFlow extends BaseTest {{
             userData.put("password", "newpass");
             userData.put("phone", "0987654321");
             userData.put("userStatus", 2);
-            
+
             Response response = given()
                 .contentType(ContentType.JSON)
                 .body(userData)
@@ -366,13 +364,13 @@ public class ComprehensiveTestFlow extends BaseTest {{
             .then()
                 .statusCode(200)
                 .extract().response();
-            
+
             System.out.println("✅ Updated user: " + createdUsername);
         }} else {{
             System.out.println("⚠️  Skipping user update - no username");
         }}
     }}
-    
+
     @Test
     @Order(8)
     void testDeleteUser() {{
@@ -385,7 +383,7 @@ public class ComprehensiveTestFlow extends BaseTest {{
             .then()
                 .statusCode(200)
                 .extract().response();
-            
+
             System.out.println("✅ Deleted user: " + createdUsername);
         }} else {{
             System.out.println("⚠️  Skipping user deletion - no username");
@@ -393,9 +391,10 @@ public class ComprehensiveTestFlow extends BaseTest {{
     }}
 }}"""
 
+
 def _generate_oauth2_test_flow(api: Any) -> str:
     """Generate OAuth2 test flow that demonstrates OAuth2 authentication"""
-    return f"""package generated;
+    return """package generated;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -414,9 +413,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class OAuth2TestFlow extends BaseTest {{
-    
+
     private static final ObjectMapper mapper = new ObjectMapper();
-    
+
     @Test
     @Order(1)
     void testOAuth2Setup() {{
@@ -425,7 +424,7 @@ public class OAuth2TestFlow extends BaseTest {{
         String oauthClientId = System.getProperty("oauth.clientId");
         String oauthUsername = System.getProperty("oauth.username");
         String oauthPassword = System.getProperty("oauth.password");
-        
+
         if (oauthTokenUrl != null && oauthClientId != null && oauthUsername != null && oauthPassword != null) {{
             System.out.println("✅ OAuth2 configuration detected");
             System.out.println("  Token URL: " + oauthTokenUrl);
@@ -435,17 +434,17 @@ public class OAuth2TestFlow extends BaseTest {{
             System.out.println("⚠️  OAuth2 configuration not provided - using API key fallback");
         }}
     }}
-    
+
     @Test
     @Order(2)
     void testOAuth2TokenEndpoint() {{
         // Test that OAuth2 token endpoint exists and is accessible
         System.out.println("🔐 Testing OAuth2 token endpoint availability...");
-        
+
         // Use base URL without /v3 for OAuth2 endpoints
         String baseUrl = System.getProperty("baseUrl");
         String oauthBaseUrl = baseUrl.replace("/v3", ""); // Remove /v3 for OAuth2 endpoints
-        
+
         Response response = given()
             .contentType(ContentType.JSON)
         .when()
@@ -453,22 +452,22 @@ public class OAuth2TestFlow extends BaseTest {{
         .then()
             .statusCode(401) // Should return 401 (Unauthorized) not 404 (Not Found)
             .extract().response();
-        
+
         System.out.println("✅ OAuth2 token endpoint is available");
         System.out.println("  Status: " + response.getStatusCode() + " (Unauthorized - endpoint exists)");
         System.out.println("  Response: " + response.asString());
     }}
-    
+
     @Test
     @Order(3)
     void testOAuth2DialogEndpoint() {{
         // Test that OAuth2 dialog endpoint exists and redirects properly
         System.out.println("🔐 Testing OAuth2 dialog endpoint...");
-        
+
         // Use base URL without /v3 for OAuth2 endpoints
         String baseUrl = System.getProperty("baseUrl");
         String oauthBaseUrl = baseUrl.replace("/v3", ""); // Remove /v3 for OAuth2 endpoints
-        
+
         Response response = given()
             .contentType(ContentType.JSON)
             .redirects().follow(false) // Don't follow redirects
@@ -477,18 +476,18 @@ public class OAuth2TestFlow extends BaseTest {{
         .then()
             .statusCode(302) // Should redirect to login
             .extract().response();
-        
+
         System.out.println("✅ OAuth2 dialog endpoint is available");
         System.out.println("  Status: " + response.getStatusCode() + " (Redirect to login)");
         System.out.println("  Location: " + response.getHeader("Location"));
     }}
-    
+
     @Test
     @Order(4)
     void testOAuth2ProtectedEndpointBehavior() {{
         // Test OAuth2 protected endpoint behavior (should require OAuth2 token)
         System.out.println("🔐 Testing OAuth2 protected endpoint behavior...");
-        
+
         Response response = given()
             .contentType(ContentType.JSON)
             .header("api_key", "special-key")
@@ -498,29 +497,29 @@ public class OAuth2TestFlow extends BaseTest {{
         .then()
             .statusCode(401) // Should return 401 (Unauthorized) - requires OAuth2 token
             .extract().response();
-        
+
         System.out.println("✅ OAuth2 protected endpoint correctly requires OAuth2 token");
         System.out.println("  Status: " + response.getStatusCode() + " (Unauthorized - as expected)");
         System.out.println("  WWW-Authenticate: " + response.getHeader("WWW-Authenticate"));
     }}
-    
+
     @Test
     @Order(5)
     void testOAuth2PetCreationBehavior() {{
         // Test OAuth2 pet creation behavior (should require OAuth2 token)
         System.out.println("🔐 Testing OAuth2 pet creation behavior...");
-        
+
         Map<String, Object> petData = new HashMap<>();
         petData.put("name", "OAuth2TestPet_" + System.currentTimeMillis());
         petData.put("status", "available");
-        
+
         Map<String, Object> category = new HashMap<>();
         category.put("id", 1);
         category.put("name", "dogs");
         petData.put("category", category);
-        
+
         petData.put("photoUrls", new String[]{{"http://example.com/photo.jpg"}});
-        
+
         Response response = given()
             .contentType(ContentType.JSON)
             .header("api_key", "special-key")
@@ -530,18 +529,18 @@ public class OAuth2TestFlow extends BaseTest {{
         .then()
             .statusCode(401) // Should return 401 (Unauthorized) - requires OAuth2 token
             .extract().response();
-        
+
         System.out.println("✅ OAuth2 pet creation correctly requires OAuth2 token");
         System.out.println("  Status: " + response.getStatusCode() + " (Unauthorized - as expected)");
         System.out.println("  WWW-Authenticate: " + response.getHeader("WWW-Authenticate"));
     }}
-    
+
     @Test
     @Order(6)
     void testOAuth2AuthenticationMethod() {{
         // Test that we're using the correct authentication method
         String oauthTokenUrl = System.getProperty("oauth.tokenUrl");
-        
+
         if (oauthTokenUrl != null) {{
             System.out.println("✅ Using OAuth2 authentication");
             System.out.println("  Authentication method: OAuth2 Password Grant");
@@ -549,7 +548,7 @@ public class OAuth2TestFlow extends BaseTest {{
             System.out.println("✅ Using API Key authentication");
             System.out.println("  Authentication method: API Key");
         }}
-        
+
         System.out.println("🔐 OAuth2 infrastructure is available:");
         System.out.println("  - Token endpoint: /oauth/token");
         System.out.println("  - Dialog endpoint: /api/oauth/dialog");
@@ -565,7 +564,7 @@ def _generate_pom_xml(api: Any) -> str:
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -594,7 +593,7 @@ def _generate_pom_xml(api: Any) -> str:
             <version>${{junit.version}}</version>
             <scope>test</scope>
         </dependency>
-        
+
         <!-- REST Assured -->
         <dependency>
             <groupId>io.rest-assured</groupId>
@@ -602,7 +601,7 @@ def _generate_pom_xml(api: Any) -> str:
             <version>${{restassured.version}}</version>
             <scope>test</scope>
         </dependency>
-        
+
         <!-- JSON Path for REST Assured -->
         <dependency>
             <groupId>io.rest-assured</groupId>
@@ -610,7 +609,7 @@ def _generate_pom_xml(api: Any) -> str:
             <version>${{restassured.version}}</version>
             <scope>test</scope>
         </dependency>
-        
+
         <!-- XML Path for REST Assured -->
         <dependency>
             <groupId>io.rest-assured</groupId>
@@ -618,7 +617,7 @@ def _generate_pom_xml(api: Any) -> str:
             <version>${{restassured.version}}</version>
             <scope>test</scope>
         </dependency>
-        
+
         <!-- Hamcrest for assertions -->
         <dependency>
             <groupId>org.hamcrest</groupId>
@@ -626,7 +625,7 @@ def _generate_pom_xml(api: Any) -> str:
             <version>${{hamcrest.version}}</version>
             <scope>test</scope>
         </dependency>
-        
+
         <!-- OAuth2 support -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
@@ -634,7 +633,7 @@ def _generate_pom_xml(api: Any) -> str:
             <version>4.11.0</version>
             <scope>test</scope>
         </dependency>
-        
+
         <!-- JSON processing for OAuth2 -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -657,7 +656,7 @@ def _generate_pom_xml(api: Any) -> str:
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
-            
+
             <!-- Maven Failsafe Plugin for integration tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -669,7 +668,7 @@ def _generate_pom_xml(api: Any) -> str:
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
-            
+
             <!-- Maven Compiler Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -687,7 +686,7 @@ def _generate_pom_xml(api: Any) -> str:
 
 def _generate_gitignore() -> str:
     """Generate .gitignore file"""
-    return """# Maven
+    return """  #  Maven
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -699,7 +698,7 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
-# IDE
+  #  IDE
 .idea/
 *.iws
 *.iml
@@ -709,14 +708,14 @@ buildNumber.properties
 .project
 .classpath
 
-# OS
+  #  OS
 .DS_Store
 Thumbs.db
 
-# Logs
+  #  Logs
 *.log
 
-# Test reports
+  #  Test reports
 test-output/
 reports/
 """
@@ -724,31 +723,31 @@ reports/
 
 def _generate_readme(api: Any) -> str:
     """Generate README.md file"""
-    return f"""# {api.title or "API"} Test Suite
+    return f"""  #  {api.title or "API"} Test Suite
 
 This is a generated test suite for the {api.title or "API"} using JUnit 5 and REST Assured.
 
-## Prerequisites
+#  #  Prerequisites
 
 - Java 11 or higher
 - Maven 3.6 or higher
 - Internet connection (for OAuth2 token requests)
 
-## Running Tests
+#  #  Running Tests
 
-### Basic Usage
+##  #  Basic Usage
 
 ```bash
 mvn verify
 ```
 
-### With Custom Base URL
+##  #  With Custom Base URL
 
 ```bash
 mvn verify -DbaseUrl='http://demopetstore.com'
 ```
 
-### With Environment Variables
+##  #  With Environment Variables
 
 ```bash
 export API_BASE_URL='http://demopetstore.com'
@@ -756,9 +755,9 @@ export API_KEY='your-api-key'
 mvn verify
 ```
 
-### With OAuth2 Authentication
+##  #  With OAuth2 Authentication
 
-#### Password Grant Flow
+#   #  Password Grant Flow
 ```bash
 mvn verify -DbaseUrl='http://demopetstore.com' \\
     -Doauth.tokenUrl='https://auth.example.com/oauth/token' \\
@@ -768,7 +767,7 @@ mvn verify -DbaseUrl='http://demopetstore.com' \\
     -Doauth.password='your-password'
 ```
 
-#### Using Environment Variables for OAuth2
+#   #  Using Environment Variables for OAuth2
 ```bash
 export OAUTH_TOKEN_URL='https://auth.example.com/oauth/token'
 export OAUTH_CLIENT_ID='your-client-id'
@@ -778,13 +777,13 @@ export OAUTH_PASSWORD='your-password'
 mvn verify
 ```
 
-## Test Structure
+#  #  Test Structure
 
 - **BaseTest.java**: Base class with common setup
 - **Endpoint Tests**: Individual test classes for each API endpoint
 - **Flow Tests**: Multi-step test scenarios (if available)
 
-## Configuration
+#  #  Configuration
 
 The test suite can be configured using:
 
@@ -792,7 +791,7 @@ The test suite can be configured using:
 2. **Environment Variables**: `API_BASE_URL`, `API_KEY`, `OAUTH_*`
 3. **Default**: `http://localhost:8080`
 
-### Authentication Methods
+##  #  Authentication Methods
 
 The test suite supports multiple authentication methods:
 
@@ -802,11 +801,11 @@ The test suite supports multiple authentication methods:
 - **API Key**: Simple header-based authentication
 - **Bearer Token**: Direct token usage
 
-## Generated Test Cases
+#  #  Generated Test Cases
 
 This test suite includes:
 - Valid test cases
-- Boundary test cases  
+- Boundary test cases
 - Negative test cases
 
 Each test case validates:
@@ -829,10 +828,10 @@ import java.util.Map;
 import java.util.HashMap;
 
 public abstract class BaseTest {
-    
+
     private static String accessToken = null;
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    
+
     @BeforeAll
     public static void setup() {
         // Get base URL from system property or environment variable
@@ -843,16 +842,16 @@ public abstract class BaseTest {
         if (baseUrl == null) {
             baseUrl = "http://localhost:8080";
         }
-        
+
         RestAssured.baseURI = baseUrl;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
-        
+
         // Setup authentication
         setupAuthentication();
-        
+
         System.out.println("Running tests against: " + baseUrl);
     }
-    
+
     private static void setupAuthentication() {
         // Check for OAuth2 configuration
         String oauthTokenUrl = System.getProperty("oauth.tokenUrl");
@@ -860,14 +859,14 @@ public abstract class BaseTest {
         String oauthClientSecret = System.getProperty("oauth.clientSecret");
         String oauthUsername = System.getProperty("oauth.username");
         String oauthPassword = System.getProperty("oauth.password");
-        
+
         // Check environment variables as fallback
         if (oauthTokenUrl == null) oauthTokenUrl = System.getenv("OAUTH_TOKEN_URL");
         if (oauthClientId == null) oauthClientId = System.getenv("OAUTH_CLIENT_ID");
         if (oauthClientSecret == null) oauthClientSecret = System.getenv("OAUTH_CLIENT_SECRET");
         if (oauthUsername == null) oauthUsername = System.getenv("OAUTH_USERNAME");
         if (oauthPassword == null) oauthPassword = System.getenv("OAUTH_PASSWORD");
-        
+
         // Try OAuth2 password grant if configured
         if (oauthTokenUrl != null && oauthClientId != null && oauthUsername != null && oauthPassword != null) {
             try {
@@ -879,7 +878,7 @@ public abstract class BaseTest {
                 System.err.println("OAuth2 authentication failed: " + e.getMessage());
             }
         }
-        
+
         // Note: API key will be handled per-request in getAuthHeaders()
         String apiKey = System.getProperty("apiKey");
         if (apiKey == null) {
@@ -889,32 +888,32 @@ public abstract class BaseTest {
             System.out.println("API Key authentication configured");
         }
     }
-    
-    private static String getOAuth2Token(String tokenUrl, String clientId, String clientSecret, 
+
+    private static String getOAuth2Token(String tokenUrl, String clientId, String clientSecret,
                                        String username, String password) throws IOException {
         OkHttpClient client = new OkHttpClient();
-        
+
         // Build form data for password grant
         FormBody.Builder formBuilder = new FormBody.Builder()
             .add("grant_type", "password")
             .add("username", username)
             .add("password", password);
-        
+
         if (clientId != null) {
             formBuilder.add("client_id", clientId);
         }
         if (clientSecret != null) {
             formBuilder.add("client_secret", clientSecret);
         }
-        
+
         RequestBody formBody = formBuilder.build();
-        
+
         Request request = new Request.Builder()
             .url(tokenUrl)
             .post(formBody)
             .header("Content-Type", "application/x-www-form-urlencoded")
             .build();
-        
+
         try (okhttp3.Response response = client.newCall(request).execute()) {
             if (response.isSuccessful() && response.body() != null) {
                 String responseBody = response.body().string();
@@ -926,18 +925,18 @@ public abstract class BaseTest {
             }
         }
     }
-    
+
     /**
      * Get authentication headers for requests
      */
     protected static Map<String, String> getAuthHeaders() {
         Map<String, String> headers = new HashMap<>();
-        
+
         // Add OAuth2 Bearer token if available
         if (accessToken != null) {
             headers.put("Authorization", "Bearer " + accessToken);
         }
-        
+
         // Add API key if available
         String apiKey = System.getProperty("apiKey");
         if (apiKey == null) {
@@ -946,29 +945,29 @@ public abstract class BaseTest {
         if (apiKey != null) {
             headers.put("api_key", apiKey);
         }
-        
+
         return headers;
     }
-    
+
     /**
      * Perform OAuth2 client credentials flow
      */
     protected static String getClientCredentialsToken(String tokenUrl, String clientId, String clientSecret) {
         try {
             OkHttpClient client = new OkHttpClient();
-            
+
             FormBody formBody = new FormBody.Builder()
                 .add("grant_type", "client_credentials")
                 .add("client_id", clientId)
                 .add("client_secret", clientSecret)
                 .build();
-            
+
             Request request = new Request.Builder()
                 .url(tokenUrl)
                 .post(formBody)
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .build();
-            
+
             try (okhttp3.Response response = client.newCall(request).execute()) {
                 if (response.isSuccessful() && response.body() != null) {
                     String responseBody = response.body().string();
@@ -981,15 +980,15 @@ public abstract class BaseTest {
         }
         return null;
     }
-    
+
     /**
      * Perform OAuth2 authorization code flow (requires manual intervention)
      */
-    protected static String getAuthorizationCodeToken(String tokenUrl, String clientId, String clientSecret, 
+    protected static String getAuthorizationCodeToken(String tokenUrl, String clientId, String clientSecret,
                                                     String authorizationCode, String redirectUri) {
         try {
             OkHttpClient client = new OkHttpClient();
-            
+
             FormBody formBody = new FormBody.Builder()
                 .add("grant_type", "authorization_code")
                 .add("client_id", clientId)
@@ -997,13 +996,13 @@ public abstract class BaseTest {
                 .add("code", authorizationCode)
                 .add("redirect_uri", redirectUri)
                 .build();
-            
+
             Request request = new Request.Builder()
                 .url(tokenUrl)
                 .post(formBody)
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .build();
-            
+
             try (okhttp3.Response response = client.newCall(request).execute()) {
                 if (response.isSuccessful() && response.body() != null) {
                     String responseBody = response.body().string();
