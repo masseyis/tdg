@@ -271,6 +271,14 @@ make dev
 make install-dev
 ```
 
+### Installing Git Hooks (Recommended)
+
+```bash
+./scripts/install-hooks.sh
+```
+
+The pre-push hook ensures code quality by running tests before each push. See [GIT_HOOKS.md](GIT_HOOKS.md) for details.
+
 ### Running Tests
 
 ```bash
