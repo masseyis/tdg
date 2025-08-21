@@ -33,6 +33,16 @@ def create_artifact_zip(artifacts: Dict[str, Any], output_path: Path) -> None:
             for file_name, content in artifacts["junit"].items():
                 zipf.writestr(f"artifacts/junit/{file_name}", content)
 
+        # Add Python tests
+        if "python" in artifacts:
+            for file_name, content in artifacts["python"].items():
+                zipf.writestr(f"artifacts/python/{file_name}", content)
+
+        # Add Node.js tests
+        if "nodejs" in artifacts:
+            for file_name, content in artifacts["nodejs"].items():
+                zipf.writestr(f"artifacts/nodejs/{file_name}", content)
+
         # Add Postman collection
         if "postman" in artifacts:
             zipf.writestr(

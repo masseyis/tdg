@@ -10,7 +10,9 @@ from app.generation.renderers import (
     wiremock,
     csv_renderer,
     sql_renderer,
-    json_renderer
+    json_renderer,
+    python_renderer,
+    nodejs_renderer
 )
 
 logger = logging.getLogger(__name__)
@@ -37,7 +39,7 @@ async def generate_test_cases(
         Dictionary of generated artifacts
     """
     if outputs is None:
-        outputs = ["junit", "postman", "json"]
+        outputs = ["junit", "python", "nodejs", "postman"]
 
     artifacts = {
         "endpoint_count": len(normalized_api.endpoints),
@@ -96,6 +98,20 @@ async def generate_test_cases(
 
     if "json" in outputs:
         artifacts["json"] = json_renderer.render(all_cases)
+
+    if "python" in outputs:
+        artifacts["python"] = python_renderer.render(
+            all_cases,
+            normalized_api,
+            flows
+        )
+
+    if "nodejs" in outputs:
+        artifacts["nodejs"] = nodejs_renderer.render(
+            all_cases,
+            normalized_api,
+            flows
+        )
 
     if "csv" in outputs:
         artifacts["csv"] = csv_renderer.render(all_cases)

@@ -120,7 +120,7 @@ async def generate_ui(
     spec_file: Optional[UploadFile] = File(None),
     spec_url: Optional[str] = Form(None),
     cases_per_endpoint: int = Form(10),
-    outputs: List[str] = Form(["junit", "postman", "json"]),
+    outputs: List[str] = Form(["junit", "python", "nodejs", "postman"]),
     domain_hint: Optional[str] = Form(None),
     seed: Optional[int] = Form(None)
 ):

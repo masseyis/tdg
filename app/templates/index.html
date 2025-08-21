@@ -34,23 +34,34 @@
     </div>
     
     <div class="form-group">
-        <label>Output Formats</label>
+        <label>Test Framework Options</label>
         <div class="checkbox-group">
             <label class="checkbox">
                 <input type="checkbox" name="outputs" value="junit" checked>
-                <span>JUnit + REST Assured</span>
+                <span>Java (JUnit + REST Assured)</span>
+            </label>
+            <label class="checkbox">
+                <input type="checkbox" name="outputs" value="python" checked>
+                <span>Python (requests)</span>
+            </label>
+            <label class="checkbox">
+                <input type="checkbox" name="outputs" value="nodejs" checked>
+                <span>Node.js (axios)</span>
             </label>
             <label class="checkbox">
                 <input type="checkbox" name="outputs" value="postman" checked>
                 <span>Postman Collection</span>
             </label>
+        </div>
+        <small>All frameworks use the same shared JSON test data for consistency</small>
+    </div>
+    
+    <div class="form-group">
+        <label>Additional Formats (Optional)</label>
+        <div class="checkbox-group">
             <label class="checkbox">
                 <input type="checkbox" name="outputs" value="wiremock">
                 <span>WireMock Stubs</span>
-            </label>
-            <label class="checkbox">
-                <input type="checkbox" name="outputs" value="json" checked>
-                <span>JSON Data</span>
             </label>
             <label class="checkbox">
                 <input type="checkbox" name="outputs" value="csv">
@@ -61,6 +72,7 @@
                 <span>SQL Inserts</span>
             </label>
         </div>
+        <small>Legacy formats for specific use cases</small>
     </div>
     
     <div class="form-group">
@@ -90,8 +102,8 @@
             <p>Valid, boundary, and negative test cases</p>
         </div>
         <div class="feature">
-            <h3>🔧 Multiple Formats</h3>
-            <p>JUnit, Postman, WireMock, CSV, SQL, and more</p>
+            <h3>🔄 Shared Test Data</h3>
+            <p>Cross-platform JSON format works with Java, Python, Node.js, and Postman</p>
         </div>
         <div class="feature">
             <h3>🔄 Reproducible</h3>
