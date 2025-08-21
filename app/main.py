@@ -19,18 +19,18 @@ from app.utils.openapi_normalizer import normalize_openapi
 from app.utils.zipping import create_artifact_zip
 from app.generation.cases import generate_test_cases
 
-  #  Configure logging
+  # Configure logging
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
-  #  Initialize FastAPI app
+# Initialize FastAPI app
 app = FastAPI(
     title="Test Data Generator",
     version="0.1.0",
     description="Generate test data from OpenAPI specifications"
 )
 
-  #  Setup templates and static files
+# Setup templates and static files
 templates = Jinja2Templates(directory="app/templates")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -39,10 +39,12 @@ async def index(request: Request):
     """Render main UI"""
     return templates.TemplateResponse("index.html", {"request": request})
 
+
 @app.get("/health")
 async def health():
     """Health check endpoint"""
     return "OK"
+
 
 @app.post("/api/validate")
 async def validate_spec(request: ValidateRequest) -> ValidateResponse:
@@ -71,6 +73,7 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
             valid=False,
             error=str(e)
         )
+
 
 @app.post("/api/generate")
 async def generate(request: GenerateRequest):
@@ -109,6 +112,7 @@ async def generate(request: GenerateRequest):
     except Exception as e:
         logger.error(f"Generation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/generate-ui")
 async def generate_ui(
@@ -149,6 +153,7 @@ async def generate_ui(
             {"request": request, "error": str(e)}
         )
 
+
 @app.exception_handler(404)
 async def not_found(request: Request, exc):
     """404 handler"""
@@ -159,6 +164,7 @@ async def not_found(request: Request, exc):
         {"request": request, "error": "Page not found"},
         status_code=404
     )
+
 
 if __name__ == "__main__":
     import uvicorn

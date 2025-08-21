@@ -15,6 +15,7 @@ from app.generation.renderers import (
 
 logger = logging.getLogger(__name__)
 
+
 async def generate_test_cases(
     normalized_api: Any,
     cases_per_endpoint: int = 10,

@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 class AnthropicProvider(AIProvider):
     """Anthropic provider for test case generation"""
 
-
     def __init__(self):
         self.client = None
         if self.is_available():
@@ -21,7 +20,6 @@ class AnthropicProvider(AIProvider):
                 self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
             except ImportError:
                 logger.warning("Anthropic library not installed")
-
 
     def is_available(self) -> bool:
         """Check if Anthropic API key is configured"""
@@ -45,7 +43,8 @@ class AnthropicProvider(AIProvider):
                 model="claude-3-haiku-20240307",
                 max_tokens=2000,
                 temperature=0.7,
-                system="You are a test data generation expert. Generate test cases as valid JSON.",
+                system="You are a test data generation expert. "
+                       "Generate test cases as valid JSON.",
                 messages=[
                     {"role": "user", "content": prompt}
                 ]

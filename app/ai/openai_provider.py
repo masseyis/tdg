@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 class OpenAIProvider(AIProvider):
     """OpenAI provider for test case generation"""
 
-
     def __init__(self):
         self.client = None
         if self.is_available():
@@ -20,7 +19,6 @@ class OpenAIProvider(AIProvider):
                 self.client = openai.OpenAI(api_key=settings.openai_api_key)
             except ImportError:
                 logger.warning("OpenAI library not installed")
-
 
     def is_available(self) -> bool:
         """Check if OpenAI API key is configured"""
@@ -43,7 +41,8 @@ class OpenAIProvider(AIProvider):
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a test data generation expert. Generate test cases as valid JSON."},
+                    {"role": "system", "content": "You are a test data generation expert. "
+                                                  "Generate test cases as valid JSON."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,

@@ -47,7 +47,8 @@ Requirements:
 1. Generate a mix of test types:
    - Valid cases (at least {count // 2}): Normal, expected inputs
    - Boundary cases ({count // 3}): Edge values like min/max lengths, limits
-   - Negative cases (remaining): Invalid inputs, missing required fields, type mismatches
+   - Negative cases (remaining): Invalid inputs, missing required fields, "
+   "type mismatches
 
 2. For each test case, provide:
    - name: Descriptive test name
