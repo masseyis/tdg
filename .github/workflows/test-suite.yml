@@ -1,0 +1,101 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run Python tests
+      run: |
+        python -m pytest tests/ -v --cov=app --cov-report=xml
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+        
+    - name: Run linting
+      run: |
+        pip install flake8 black
+        flake8 app/ --max-line-length=88 --extend-ignore=E203,W503
+        black --check app/
+        
+  java-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Generate test cases
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        python -m app.main --input examples/petstore.json --output generated-tests --format junit
+        
+    - name: Run generated Java tests
+      run: |
+        cd generated-tests
+        mvn clean test -DbaseUrl=https://petstore.swagger.io/v2
+        
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [python-tests, java-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Start test server
+      run: |
+        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+        sleep 10
+        
+    - name: Run integration tests
+      run: |
+        curl -f http://localhost:8000/health || exit 1
+        curl -f http://localhost:8000/ || exit 1

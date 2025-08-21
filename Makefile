@@ -11,6 +11,11 @@ test:
 test-cov:
 	pytest --cov=app --cov-report=html --cov-report=term
 
+test-ci:
+	pytest -v --cov=app --cov-report=xml
+	flake8 app/ --max-line-length=88 --extend-ignore=E203,W503
+	black --check app/
+
 # Linting
 lint:
 	ruff check app tests
