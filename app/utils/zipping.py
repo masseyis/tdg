@@ -109,24 +109,28 @@ def create_artifact_zip(artifacts: Dict[str, Any], output_path: Path) -> None:
         
         # Method 1: Try system zip with minimal options
         try:
-            subprocess.run([
+            result = subprocess.run([
                 'zip', '-r', '-q', str(output_path), '.'
-            ], cwd=temp_path, check=True, capture_output=True)
+            ], cwd=temp_path, check=True, capture_output=True, text=True)
             logger.info(f"Created artifact ZIP with system zip at {output_path}")
             zip_created = True
         except subprocess.CalledProcessError as e:
             logger.warning(f"System zip failed: {e}")
+            if e.stderr:
+                logger.warning(f"System zip stderr: {e.stderr}")
         
         # Method 2: Try system zip with store compression
         if not zip_created:
             try:
-                subprocess.run([
+                result = subprocess.run([
                     'zip', '-r', '-q', '-Z', 'store', str(output_path), '.'
-                ], cwd=temp_path, check=True, capture_output=True)
+                ], cwd=temp_path, check=True, capture_output=True, text=True)
                 logger.info(f"Created artifact ZIP with system zip (store) at {output_path}")
                 zip_created = True
             except subprocess.CalledProcessError as e:
                 logger.warning(f"System zip (store) failed: {e}")
+                if e.stderr:
+                    logger.warning(f"System zip stderr: {e.stderr}")
         
         # Method 3: Fallback to Python zipfile with minimal options
         if not zip_created:
@@ -152,4 +156,15 @@ def create_artifact_zip(artifacts: Dict[str, Any], output_path: Path) -> None:
                 zip_created = True
             except Exception as e:
                 logger.error(f"Python zipfile fallback failed: {e}")
-                raise
+                # Final fallback: create a simple ZIP with just the summary
+                try:
+                    import zipfile
+                    with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_STORED) as zipf:
+                        summary_file = temp_path / "summary.json"
+                        if summary_file.exists():
+                            zipf.write(summary_file, "summary.json")
+                        logger.info(f"Created minimal artifact ZIP at {output_path}")
+                        zip_created = True
+                except Exception as final_e:
+                    logger.error(f"Final fallback failed: {final_e}")
+                    raise
