@@ -160,10 +160,9 @@ async def generate_ui(
         return await generate(gen_request)
 
     except Exception as e:
-        return templates.TemplateResponse(
-            "app.html",
-            {"request": request, "error": str(e)}
-        )
+        logger.error(f"UI generation error: {e}")
+        # Return a proper error response instead of HTML template
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.exception_handler(404)
