@@ -139,17 +139,20 @@ def _generate_test_cases(cases: List[Any]) -> str:
     for case in cases:
         body_str = "null"
         if case.body:
-                        body_str = f'"{json.dumps(case.body).replace('"', '\\"')}"'
+            json_body = json.dumps(case.body).replace('"', '\\"')
+            body_str = f'"{json_body}"'
 
         # Handle query parameters
         query_params_str = "null"
         if case.query_params:
-                        query_params_str = f'"{json.dumps(case.query_params).replace('"', '\\"')}"'
+            json_query = json.dumps(case.query_params).replace('"', '\\"')
+            query_params_str = f'"{json_query}"'
 
         # Handle path parameters
         path_params_str = "null"
         if case.path_params:
-                        path_params_str = f'"{json.dumps(case.path_params).replace('"', '\\"')}"'
+            json_path = json.dumps(case.path_params).replace('"', '\\"')
+            path_params_str = f'"{json_path}"'
 
         line = f'            Arguments.of("{case.name}", "{case.method}", "{case.path}", {body_str}, {query_params_str}, {path_params_str}, {case.expected_status})'
         lines.append(line)
