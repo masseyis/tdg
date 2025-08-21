@@ -17,7 +17,8 @@ def create_artifact_zip(artifacts: Dict[str, Any], output_path: Path) -> None:
         artifacts: Generated artifacts dict
         output_path: Path to output ZIP file
     """
-    with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    # Use ZIP_STORED (no compression) for maximum compatibility with macOS and other systems
+    with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_STORED, allowZip64=True) as zipf:
         # Add summary
         summary = {
             "generated_at": datetime.utcnow().isoformat(),
