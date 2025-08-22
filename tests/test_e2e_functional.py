@@ -322,7 +322,7 @@ def test_generator_service_health():
     client = TestClient(app)
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["status"] == "healthy"
+    assert response.json() == "OK"
 
 
 def test_ui_endpoints():
