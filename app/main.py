@@ -129,36 +129,40 @@ async def generate(request: GenerateRequest):
 @app.post("/generate-ui")
 async def generate_ui(
     request: Request,
-    spec_file: Optional[UploadFile] = File(None),
-    spec_url: Optional[str] = Form(None),
-    cases_per_endpoint: int = Form(10),
+    file: Optional[UploadFile] = File(None),
+    specUrl: Optional[str] = Form(None),
+    casesPerEndpoint: int = Form(10),
     outputs: List[str] = Form(["junit", "python", "nodejs", "postman"]),
-    domain_hint: Optional[str] = Form(None),
+    domainHint: Optional[str] = Form(None),
     seed: Optional[int] = Form(None)
 ):
     """Handle form submission from UI"""
     try:
         # Prepare OpenAPI input
         openapi_input = None
-        if spec_file and spec_file.filename:
-            content = await spec_file.read()
+        if file and file.filename:
+            content = await file.read()
             openapi_input = base64.b64encode(content).decode()
-        elif spec_url:
-            openapi_input = spec_url
+        elif specUrl:
+            openapi_input = specUrl
         else:
-            raise ValueError("Please provide either a file or URL")
+            raise ValueError("Please upload an OpenAPI specification file (.json, .yaml, .yml) or provide a URL to your OpenAPI spec")
 
         # Call generation API
         gen_request = GenerateRequest(
             openapi=openapi_input,
-            casesPerEndpoint=cases_per_endpoint,
+            casesPerEndpoint=casesPerEndpoint,
             outputs=outputs,
-            domainHint=domain_hint,
+            domainHint=domainHint,
             seed=seed
         )
 
         return await generate(gen_request)
 
+    except ValueError as e:
+        logger.error(f"UI validation error: {e}")
+        # Return a 400 Bad Request for validation errors
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"UI generation error: {e}")
         # Return a proper error response instead of HTML template

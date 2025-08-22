@@ -236,9 +236,10 @@
                     // Show results
                     document.getElementById('results').classList.remove('hidden');
                 } else {
-                    const errorText = await response.text();
-                    console.error('Server error:', errorText);
-                    alert('Error generating test cases. Please try again.');
+                    const errorData = await response.json();
+                    const errorMessage = errorData.detail || 'Error generating test cases. Please try again.';
+                    console.error('Server error:', errorMessage);
+                    alert(errorMessage);
                 }
             } catch (error) {
                 console.error('Network error:', error);
