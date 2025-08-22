@@ -1,0 +1,68 @@
+{
+  "metadata": {
+    "generated_at": "2024-01-01T00:00:00Z",
+    "generator": "Test Data Generator MVP",
+    "version": "1.0.0",
+    "total_cases": 4
+  },
+  "test_cases": [
+    {
+      "id": "list_versions_valid_request",
+      "name": "list_versions_valid_request",
+      "description": "Test the successful retrieval of versions using valid parameters",
+      "method": "GET",
+      "path": "/",
+      "headers": {},
+      "query_params": {},
+      "path_params": {},
+      "body": null,
+      "expected_status": 200,
+      "expected_response": null,
+      "test_type": "valid"
+    },
+    {
+      "id": "list_versions_missing_required_fields",
+      "name": "list_versions_missing_required_fields",
+      "description": "Test the API response when required fields are missing",
+      "method": "GET",
+      "path": "/",
+      "headers": {},
+      "query_params": {},
+      "path_params": {},
+      "body": null,
+      "expected_status": 400,
+      "expected_response": null,
+      "test_type": "negative"
+    },
+    {
+      "id": "get_version_details_valid_request",
+      "name": "get_version_details_valid_request",
+      "description": "Test retrieving version details with a valid request.",
+      "method": "GET",
+      "path": "/v2",
+      "headers": {},
+      "query_params": {},
+      "path_params": {},
+      "body": null,
+      "expected_status": 200,
+      "expected_response": null,
+      "test_type": "valid"
+    },
+    {
+      "id": "get_version_details_missing_authentication",
+      "name": "get_version_details_missing_authentication",
+      "description": "Test retrieving version details without proper authentication.",
+      "method": "GET",
+      "path": "/v2",
+      "headers": {
+        "Authorization": "Bearer invalid_token"
+      },
+      "query_params": {},
+      "path_params": {},
+      "body": null,
+      "expected_status": 401,
+      "expected_response": null,
+      "test_type": "negative"
+    }
+  ]
+}

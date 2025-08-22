@@ -1,0 +1,13 @@
+{
+  "generated_at": "2025-08-21T22:20:56.040453",
+  "endpoints": 2,
+  "cases_per_endpoint": 2,
+  "outputs": [
+    "endpoint_count",
+    "cases_per_endpoint",
+    "total_cases",
+    "junit",
+    "python"
+  ],
+  "total_cases": 4
+}

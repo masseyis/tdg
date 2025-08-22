@@ -144,7 +144,7 @@ def create_artifact_zip(artifacts: Dict[str, Any], output_path: Path) -> None:
                             try:
                                 arcname = file_path.relative_to(temp_path)
                                 # Skip very deep nested files that might cause compatibility issues
-                                if len(arcname.parts) <= 3:  # Only allow 3 parts (e.g., artifacts/junit/file)
+                                if len(arcname.parts) <= 8:  # Allow deeper nesting for Java project structure
                                     essential_files.append((file_path, arcname))
                             except Exception as file_e:
                                 logger.warning(f"Skipping problematic file {file_path}: {file_e}")
