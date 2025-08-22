@@ -82,13 +82,18 @@
                             <option value="10" selected>10 cases</option>
                             <option value="15">15 cases</option>
                             <option value="20">20 cases</option>
+                            <option value="50">50 cases</option>
+                            <option value="100">100 cases</option>
+                            <option value="200">200 cases</option>
+                            <option value="500">500 cases</option>
                         </select>
                     </div>
                     
                     <div>
                         <label for="domainHint" class="block text-sm font-medium text-gray-300 mb-2">Domain Hint</label>
                         <select name="domainHint" id="domainHint" 
-                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-teal-500 focus:outline-none">
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-teal-500 focus:outline-none mb-2"
+                                onchange="toggleCustomDomain()">
                             <option value="">General</option>
                             <option value="petstore">Pet Store</option>
                             <option value="ecommerce">E-commerce</option>
@@ -96,7 +101,11 @@
                             <option value="financial">Financial</option>
                             <option value="healthcare">Healthcare</option>
                             <option value="social">Social Media</option>
+                            <option value="custom">Custom Domain...</option>
                         </select>
+                        <input type="text" name="customDomainHint" id="customDomainHint" 
+                               placeholder="Enter your custom domain (e.g., inventory, booking, analytics)"
+                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:border-teal-500 focus:outline-none hidden">
                     </div>
                     
                     <div>
@@ -217,11 +226,33 @@
             `;
         }
 
+        function toggleCustomDomain() {
+            const domainSelect = document.getElementById('domainHint');
+            const customInput = document.getElementById('customDomainHint');
+            
+            if (domainSelect.value === 'custom') {
+                customInput.classList.remove('hidden');
+                customInput.focus();
+            } else {
+                customInput.classList.add('hidden');
+                customInput.value = '';
+            }
+        }
+
         // Form submission handling
         document.querySelector('form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const formData = new FormData(e.target);
+            
+            // Handle custom domain hint
+            const domainSelect = document.getElementById('domainHint');
+            const customInput = document.getElementById('customDomainHint');
+            
+            if (domainSelect.value === 'custom' && customInput.value.trim()) {
+                // Replace the 'custom' value with the actual custom domain
+                formData.set('domainHint', customInput.value.trim());
+            }
             
             // Debug: Log what's in the form data
             console.log('Form data contents:');

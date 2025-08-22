@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, validator
 class GenerateRequest(BaseModel):
     """Request to generate test data"""
     openapi: str = Field(..., description="Base64 encoded spec content or URL")
-    casesPerEndpoint: int = Field(10, ge=1, le=100)
+    casesPerEndpoint: int = Field(10, ge=1, le=500)
     outputs: List[str] = Field(
         default=["junit", "python", "nodejs", "postman"],
         description="Output formats: junit, python, nodejs, postman, wiremock, json, csv, sql"

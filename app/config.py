@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     max_workers: int = 4
 
     # Generation settings
-    max_cases_per_endpoint: int = 100
+    max_cases_per_endpoint: int = 500
     default_cases_per_endpoint: int = 10
     request_timeout: int = 30
 
