@@ -51,7 +51,7 @@
                 <h2 class="text-xl font-semibold font-space-grotesk mb-4">Upload OpenAPI Specification</h2>
                 
                 <div class="border-2 border-dashed border-gray-700 rounded-lg p-8 text-center hover:border-teal-500 transition-colors" id="dropZone">
-                    <div class="space-y-4">
+                    <div id="dropZoneContent" class="space-y-4">
                         <div class="text-4xl">📄</div>
                         <div>
                             <p class="text-lg font-medium">Drop your OpenAPI spec here</p>
@@ -180,27 +180,28 @@
             e.preventDefault();
             dropZone.classList.remove('border-teal-500');
             const files = e.dataTransfer.files;
+            console.log('Files dropped:', files.length, files[0]?.name);
             if (files.length > 0) {
                 fileInput.files = files;
                 updateFileName(files[0].name);
+                console.log('File input updated with:', fileInput.files[0]?.name);
             }
         });
         
         fileInput.addEventListener('change', (e) => {
+            console.log('File input changed:', e.target.files.length, e.target.files[0]?.name);
             if (e.target.files.length > 0) {
                 updateFileName(e.target.files[0].name);
             }
         });
         
         function updateFileName(name) {
-            const dropZone = document.getElementById('dropZone');
-            dropZone.innerHTML = `
-                <div class="space-y-4">
-                    <div class="text-4xl">📄</div>
-                    <div>
-                        <p class="text-lg font-medium text-teal-400">${name}</p>
-                        <p class="text-gray-400">File selected</p>
-                    </div>
+            const dropZoneContent = document.getElementById('dropZoneContent');
+            dropZoneContent.innerHTML = `
+                <div class="text-4xl">📄</div>
+                <div>
+                    <p class="text-lg font-medium text-teal-400">${name}</p>
+                    <p class="text-gray-400">File selected</p>
                 </div>
             `;
         }
@@ -210,6 +211,17 @@
             e.preventDefault();
             
             const formData = new FormData(e.target);
+            
+            // Debug: Log what's in the form data
+            console.log('Form data contents:');
+            for (let [key, value] of formData.entries()) {
+                if (value instanceof File) {
+                    console.log(`${key}: File(${value.name}, ${value.size} bytes)`);
+                } else {
+                    console.log(`${key}: ${value}`);
+                }
+            }
+            
             const submitBtn = e.target.querySelector('button[type="submit"]');
             const originalText = submitBtn.textContent;
             
