@@ -264,6 +264,9 @@
                 }
             }
             
+            // Show loading spinner
+            showLoadingSpinner();
+            
             const submitBtn = e.target.querySelector('button[type="submit"]');
             const originalText = submitBtn.textContent;
             
@@ -301,8 +304,55 @@
             } finally {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
+                hideLoadingSpinner();
             }
         });
+        
+        // Loading spinner functions
+        function showLoadingSpinner() {
+            const spinner = document.getElementById('loadingSpinner');
+            spinner.classList.remove('hidden');
+        }
+        
+        function hideLoadingSpinner() {
+            const spinner = document.getElementById('loadingSpinner');
+            spinner.classList.add('hidden');
+        }
     </script>
+    
+    <!-- Loading Spinner Overlay -->
+    <div id="loadingSpinner" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl p-8 text-center max-w-md">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-teal-400 mx-auto mb-4"></div>
+            <h3 class="text-xl font-semibold font-space-grotesk mb-2">Generating Test Cases</h3>
+            <p class="text-gray-300 mb-4">This may take a few minutes for complex APIs...</p>
+            
+            <!-- Progress Steps -->
+            <div class="space-y-2 text-sm">
+                <div id="step1" class="flex items-center text-gray-400">
+                    <div class="w-4 h-4 rounded-full bg-gray-700 mr-3"></div>
+                    <span>Processing OpenAPI specification</span>
+                </div>
+                <div id="step2" class="flex items-center text-gray-400">
+                    <div class="w-4 h-4 rounded-full bg-gray-700 mr-3"></div>
+                    <span>Generating test cases with AI</span>
+                </div>
+                <div id="step3" class="flex items-center text-gray-400">
+                    <div class="w-4 h-4 rounded-full bg-gray-700 mr-3"></div>
+                    <span>Creating test artifacts</span>
+                </div>
+                <div id="step4" class="flex items-center text-gray-400">
+                    <div class="w-4 h-4 rounded-full bg-gray-700 mr-3"></div>
+                    <span>Building ZIP file</span>
+                </div>
+            </div>
+            
+            <!-- Estimated Time -->
+            <div class="mt-6 text-xs text-gray-500">
+                <p>⏱️ Estimated time: 2-5 minutes</p>
+                <p>📊 Processing endpoints concurrently</p>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

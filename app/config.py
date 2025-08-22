@@ -28,11 +28,11 @@ class Settings(BaseSettings):
     # AI Generation settings
     ai_temperature: float = 0.7  # Lower = more consistent, faster
     ai_max_tokens: int = 2000  # Lower = faster generation
-    ai_timeout: int = 15  # Shorter timeout for faster fallback
+    ai_timeout: int = 60  # Increased timeout for better reliability
     
-    # Concurrency settings (reduced for memory stability)
-    ai_concurrency_limit: int = 5  # Maximum concurrent AI requests
-    max_concurrent_requests: int = 20  # Maximum concurrent HTTP requests
+    # Concurrency settings (optimized for performance and memory stability)
+    ai_concurrency_limit: int = 8  # Maximum concurrent AI requests
+    max_concurrent_requests: int = 30  # Maximum concurrent HTTP requests
 
 
     class Config:

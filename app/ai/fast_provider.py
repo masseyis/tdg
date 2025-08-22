@@ -68,7 +68,7 @@ class FastAIProvider(AIProvider):
 
         # Allocate more tokens for POST operations to ensure rich data generation
         max_tokens = 2000 if endpoint.method == "POST" else 1000
-        timeout = 15 if endpoint.method == "POST" else 10
+        timeout = 60 if endpoint.method == "POST" else 45  # Increased timeouts for better reliability
 
         response = self.openai_client.chat.completions.create(
             model="gpt-4o-mini",  # Fastest OpenAI model
