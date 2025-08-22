@@ -31,10 +31,15 @@ class NullProvider(AIProvider):
         if seed:
             set_seed(seed)
 
-        # Calculate distribution
-        valid_count = max(1, count // 2)
-        boundary_count = max(1, count // 3)
-        negative_count = max(1, count - valid_count - boundary_count)
+        # Calculate distribution - for POST operations, prioritize valid cases with rich data
+        if endpoint.method == "POST":
+            valid_count = max(count * 2 // 3, count // 2)  # More valid cases for POST
+            boundary_count = max(1, count // 4)
+            negative_count = max(1, count - valid_count - boundary_count)
+        else:
+            valid_count = max(1, count // 2)
+            boundary_count = max(1, count // 3)
+            negative_count = max(1, count - valid_count - boundary_count)
 
         # Generate valid cases
         for i in range(valid_count):

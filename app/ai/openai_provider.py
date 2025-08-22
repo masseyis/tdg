@@ -24,10 +24,12 @@ class OpenAIProvider(AIProvider):
         """Check if OpenAI API key is configured"""
         return bool(settings.openai_api_key)
 
-    def _get_model_config(self, speed: str) -> tuple[str, float, int]:
-        """Get model configuration based on speed preference"""
+    def _get_model_config(self, speed: str, endpoint: Any = None) -> tuple[str, float, int]:
+        """Get model configuration based on speed preference and endpoint type"""
         if speed == "fast":
-            return "gpt-4o-mini", 0.3, 1000  # Fastest model, lower temperature, fewer tokens
+            # Allocate more tokens for POST operations to ensure rich data generation
+            tokens = 2000 if (endpoint and endpoint.method == "POST") else 1000
+            return "gpt-4o-mini", 0.5, tokens  # Slightly higher temperature for more variety
         elif speed == "balanced":
             return settings.openai_model, settings.ai_temperature, settings.ai_max_tokens
         elif speed == "quality":
@@ -49,9 +51,9 @@ class OpenAIProvider(AIProvider):
         try:
             prompt = get_test_generation_prompt(endpoint, options)
 
-            # Get model configuration based on speed preference
+            # Get model configuration based on speed preference and endpoint type
             speed = options.get("speed", "fast")
-            model, temperature, max_tokens = self._get_model_config(speed)
+            model, temperature, max_tokens = self._get_model_config(speed, endpoint)
             
             response = self.client.chat.completions.create(
                 model=model,

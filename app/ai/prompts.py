@@ -39,19 +39,31 @@ def get_test_generation_prompt(endpoint: Any, options: Dict[str, Any]) -> str:
     # Domain-specific guidance
     domain_guidance = _get_domain_guidance(domain_hint)
     
+    # Prioritize POST operations for better test data
+    method_emphasis = ""
+    if endpoint_desc.get("method") == "POST":
+        method_emphasis = f"""
+⚠️ CRITICAL: This is a POST operation. Generate {count} test cases with RICH, MEANINGFUL DATA.
+- ALL valid cases MUST have complete, realistic request bodies
+- Use domain-appropriate data that would be typical in real-world usage
+- Avoid empty, null, or minimal payloads
+- Create varied, comprehensive examples that test different data scenarios
+"""
+    
     prompt = f"""Generate {count} comprehensive test cases for the following API endpoint.
 
 Endpoint Details:
 {json.dumps(endpoint_desc, indent=2)}
 
 Domain Context: {domain_hint or "General API"}
+{method_emphasis}
 
 {domain_guidance}
 
 Requirements:
-1. Generate a mix of test types:
-   - Valid cases (at least {count // 2}): Normal, expected inputs with realistic domain data
-   - Boundary cases ({count // 3}): Edge values, limits, and boundary conditions
+1. Generate a mix of test types with RICH DATA:
+   - Valid cases (at least {count // 2}): Normal, expected inputs with realistic, COMPLETE domain data
+   - Boundary cases ({count // 3}): Edge values, limits, and boundary conditions with meaningful data
    - Negative cases (remaining): Invalid inputs, missing required fields, type mismatches, and error scenarios
 
 2. For each test case, provide:

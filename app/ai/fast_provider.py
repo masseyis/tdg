@@ -66,16 +66,20 @@ class FastAIProvider(AIProvider):
         """Generate using OpenAI with fastest settings"""
         prompt = get_test_generation_prompt(endpoint, options)
 
+        # Allocate more tokens for POST operations to ensure rich data generation
+        max_tokens = 2000 if endpoint.method == "POST" else 1000
+        timeout = 15 if endpoint.method == "POST" else 10
+
         response = self.openai_client.chat.completions.create(
             model="gpt-4o-mini",  # Fastest OpenAI model
             messages=[
-                {"role": "system", "content": "Generate test cases quickly as valid JSON."},
+                {"role": "system", "content": "Generate test cases as valid JSON with rich, meaningful data."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3,  # Lower temperature for faster, more consistent output
-            max_tokens=1000,  # Reduced tokens for speed
+            temperature=0.5,  # Slightly higher temperature for more variety
+            max_tokens=max_tokens,
             response_format={"type": "json_object"},
-            timeout=10  # Shorter timeout
+            timeout=timeout
         )
 
         content = response.choices[0].message.content
@@ -86,11 +90,14 @@ class FastAIProvider(AIProvider):
         """Generate using Anthropic with fastest settings"""
         prompt = get_test_generation_prompt(endpoint, options)
 
+        # Allocate more tokens for POST operations to ensure rich data generation
+        max_tokens = 2000 if endpoint.method == "POST" else 1000
+
         message = self.anthropic_client.messages.create(
             model="claude-3-haiku-20240307",  # Fastest Anthropic model
-            max_tokens=1000,  # Reduced tokens for speed
-            temperature=0.3,  # Lower temperature for faster, more consistent output
-            system="Generate test cases quickly as valid JSON.",
+            max_tokens=max_tokens,
+            temperature=0.5,  # Slightly higher temperature for more variety
+            system="Generate test cases as valid JSON with rich, meaningful data.",
             messages=[
                 {"role": "user", "content": prompt}
             ]
