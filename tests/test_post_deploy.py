@@ -281,6 +281,7 @@ class NodeTestRunner:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(reason="This test is for post-deployment validation only")
 async def test_deployed_service_complete_user_experience():
     """
     Test the complete user experience against the deployed service
