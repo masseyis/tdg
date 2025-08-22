@@ -30,9 +30,9 @@ class Settings(BaseSettings):
     ai_max_tokens: int = 2000  # Lower = faster generation
     ai_timeout: int = 15  # Shorter timeout for faster fallback
     
-    # Concurrency settings
-    ai_concurrency_limit: int = 10  # Maximum concurrent AI requests
-    max_concurrent_requests: int = 50  # Maximum concurrent HTTP requests
+    # Concurrency settings (reduced for memory stability)
+    ai_concurrency_limit: int = 5  # Maximum concurrent AI requests
+    max_concurrent_requests: int = 20  # Maximum concurrent HTTP requests
 
 
     class Config:

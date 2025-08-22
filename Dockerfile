@@ -15,6 +15,12 @@ RUN pip install --user --no-cache-dir -r requirements.txt
 # Runtime stage
 FROM python:3.11-slim
 
+# Set memory limits and Python optimizations
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONOPTIMIZE=1
+ENV PYTHONHASHSEED=random
+
 WORKDIR /app
 
 # Create non-root user
@@ -35,4 +41,4 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "2", "--limit-max-requests", "1000", "--limit-max-requests-jitter", "100"]

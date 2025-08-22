@@ -1,6 +1,6 @@
 """FastAPI main application"""
 import base64
-
+import gc
 import logging
 import tempfile
 from pathlib import Path
@@ -65,12 +65,24 @@ async def health():
 @app.get("/status")
 async def status():
     """Get current service status and concurrency info"""
+    # Get memory usage
+    try:
+        import psutil
+        process = psutil.Process()
+        memory_info = process.memory_info()
+        memory_percent = process.memory_percent()
+    except ImportError:
+        memory_info = None
+        memory_percent = None
+    
     return {
         "status": "healthy",
         "concurrent_requests": request_semaphore._value,
         "max_concurrent_requests": settings.max_concurrent_requests,
         "ai_concurrency_limit": settings.ai_concurrency_limit,
-        "max_cases_per_endpoint": settings.max_cases_per_endpoint
+        "max_cases_per_endpoint": settings.max_cases_per_endpoint,
+        "memory_usage_mb": round(memory_info.rss / 1024 / 1024, 2) if memory_info else None,
+        "memory_percent": round(memory_percent, 2) if memory_percent else None
     }
 
 
@@ -127,15 +139,21 @@ async def generate(request: GenerateRequest):
                 zip_path = Path(tmp.name)
                 create_artifact_zip(artifacts, zip_path)
 
-            # Return ZIP file
-            return FileResponse(
-                zip_path,
-                media_type="application/octet-stream",
-                filename="test-artifacts.zip",
-                headers={
-                    "Content-Disposition": "attachment; filename=test-artifacts.zip"
-                }
-            )
+                    # Return ZIP file
+        response = FileResponse(
+            zip_path,
+            media_type="application/octet-stream",
+            filename="test-artifacts.zip",
+            headers={
+                "Content-Disposition": "attachment; filename=test-artifacts.zip"
+            }
+        )
+        
+        # Clean up memory after generation
+        del artifacts
+        gc.collect()
+        
+        return response
 
         except ValidationError as e:
             raise HTTPException(status_code=422, detail=e.errors())

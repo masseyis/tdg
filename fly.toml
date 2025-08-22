@@ -16,6 +16,20 @@ primary_region = "ord"
   min_machines_running = 1
   processes = ["app"]
 
+# Memory and resource limits
+[env]
+  PORT = "8080"
+  LOG_LEVEL = "INFO"
+  PYTHONUNBUFFERED = "1"
+  PYTHONDONTWRITEBYTECODE = "1"
+  PYTHONOPTIMIZE = "1"
+
+# Machine configuration for memory management
+[[vm]]
+  memory = "512MB"
+  cpu_kind = "shared"
+  cpus = 1
+
 [[services]]
   protocol = "tcp"
   internal_port = 8080

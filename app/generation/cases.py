@@ -86,6 +86,12 @@ async def generate_test_cases(
     all_cases = []
     for cases in endpoint_results:
         all_cases.extend(cases)
+    
+    # Clean up memory after processing
+    del endpoint_results
+    del endpoint_tasks
+    import gc
+    gc.collect()
 
     artifacts["total_cases"] = len(all_cases)
 
