@@ -1,7 +1,7 @@
 """Test case generation orchestration"""
 import logging
 from typing import Dict, Any, List
-from app.ai.base import get_provider
+from app.ai.base import get_provider, get_provider_for_speed
 from app.utils.validation import validate_against_schema, fix_data_for_schema
 from app.utils.flows import create_basic_flows
 from app.generation.renderers import (
