@@ -39,3 +39,19 @@ jobs:
       run: |
         sleep 30
         curl -f https://tdg-mvp.fly.dev/health || exit 1
+        
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '11'
+        
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Run post-deployment tests
+      run: |
+        sleep 10  # Give the deployment a moment to fully stabilize
+        python -m pytest tests/test_post_deploy.py::test_deployed_service_complete_user_experience -v -s --log-cli-level=INFO

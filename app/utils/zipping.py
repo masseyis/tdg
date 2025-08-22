@@ -104,90 +104,43 @@ def create_artifact_zip(artifacts: Dict[str, Any], output_path: Path) -> None:
             with open(sql_file, 'w') as f:
                 f.write(artifacts["sql"])
 
-        # Try multiple approaches for maximum compatibility
-        zip_created = False
-        
-        # Method 1: Try system zip with minimal options
+        # Use Python zipfile module (primary method for containerized environments)
+        import zipfile
         try:
-            result = subprocess.run([
-                'zip', '-r', '-q', str(output_path), '.'
-            ], cwd=temp_path, check=True, capture_output=True, text=True)
-            logger.info(f"Created artifact ZIP with system zip at {output_path}")
-            zip_created = True
-        except subprocess.CalledProcessError as e:
-            logger.warning(f"System zip failed: {e}")
-            if e.stderr:
-                logger.warning(f"System zip stderr: {e.stderr}")
-        
-        # Method 2: Try system zip with store compression
-        if not zip_created:
-            try:
-                result = subprocess.run([
-                    'zip', '-r', '-q', '-Z', 'store', str(output_path), '.'
-                ], cwd=temp_path, check=True, capture_output=True, text=True)
-                logger.info(f"Created artifact ZIP with system zip (store) at {output_path}")
-                zip_created = True
-            except subprocess.CalledProcessError as e:
-                logger.warning(f"System zip (store) failed: {e}")
-                if e.stderr:
-                    logger.warning(f"System zip stderr: {e.stderr}")
-        
-        # Method 3: Fallback to Python zipfile with minimal options
-        if not zip_created:
-            try:
-                import zipfile
-                with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_STORED) as zipf:
-                    # Only add essential files to reduce complexity
-                    essential_files = []
-                    for file_path in temp_path.rglob('*'):
-                        if file_path.is_file():
-                            try:
-                                arcname = file_path.relative_to(temp_path)
-                                # Skip very deep nested files that might cause compatibility issues
-                                if len(arcname.parts) <= 8:  # Allow deeper nesting for Java project structure
-                                    essential_files.append((file_path, arcname))
-                            except Exception as file_e:
-                                logger.warning(f"Skipping problematic file {file_path}: {file_e}")
-                                continue
-                    
-                    # Sort files to ensure consistent ordering
-                    essential_files.sort(key=lambda x: str(x[1]))
-                    
-                    for file_path, arcname in essential_files:
+            with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zipf:
+                # Add all files to the ZIP
+                for file_path in temp_path.rglob('*'):
+                    if file_path.is_file():
                         try:
-                            zipf.write(file_path, arcname)
-                        except Exception as write_e:
-                            logger.warning(f"Failed to add file {arcname} to ZIP: {write_e}")
+                            arcname = file_path.relative_to(temp_path)
+                            # Skip very deep nested files that might cause compatibility issues
+                            if len(arcname.parts) <= 8:  # Allow deeper nesting for Java project structure
+                                zipf.write(file_path, arcname)
+                        except Exception as file_e:
+                            logger.warning(f"Skipping problematic file {file_path}: {file_e}")
                             continue
                 
-                logger.info(f"Created artifact ZIP with Python fallback at {output_path}")
-                zip_created = True
-            except Exception as e:
-                logger.error(f"Python zipfile fallback failed: {e}")
-                # Final fallback: create a simple ZIP with just the summary
+            logger.info(f"Created artifact ZIP with Python zipfile at {output_path}")
+        except Exception as e:
+            logger.error(f"Python zipfile failed: {e}")
+            # Fallback: create a simple ZIP with just the summary
+            try:
+                with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_STORED) as zipf:
+                    summary_file = temp_path / "summary.json"
+                    if summary_file.exists():
+                        zipf.write(summary_file, "summary.json")
+                    logger.info(f"Created minimal artifact ZIP at {output_path}")
+            except Exception as final_e:
+                logger.error(f"Final fallback failed: {final_e}")
+                # Ultimate fallback: create an empty ZIP file
                 try:
-                    import zipfile
                     with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_STORED) as zipf:
-                        summary_file = temp_path / "summary.json"
-                        if summary_file.exists():
-                            zipf.write(summary_file, "summary.json")
-                        logger.info(f"Created minimal artifact ZIP at {output_path}")
-                        zip_created = True
-                except Exception as final_e:
-                    logger.error(f"Final fallback failed: {final_e}")
-                    # Ultimate fallback: create an empty ZIP file
-                    try:
-                        import zipfile
-                        with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_STORED) as zipf:
-                            # Add a simple text file explaining the issue
-                            zipf.writestr("error.txt", "ZIP generation encountered issues. Please try again.")
-                        logger.info(f"Created error ZIP at {output_path}")
-                        zip_created = True
-                    except Exception as ultimate_e:
-                        logger.error(f"Ultimate fallback failed: {ultimate_e}")
-                        # If all else fails, we must succeed - create a basic ZIP
-                        import zipfile
-                        with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_STORED) as zipf:
-                            zipf.writestr("summary.json", json.dumps({"error": "ZIP generation failed", "generated_at": datetime.utcnow().isoformat()}, indent=2))
-                        logger.info(f"Created basic error ZIP at {output_path}")
-                        zip_created = True
+                        # Add a simple text file explaining the issue
+                        zipf.writestr("error.txt", "ZIP generation encountered issues. Please try again.")
+                    logger.info(f"Created error ZIP at {output_path}")
+                except Exception as ultimate_e:
+                    logger.error(f"Ultimate fallback failed: {ultimate_e}")
+                    # If all else fails, we must succeed - create a basic ZIP
+                    with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_STORED) as zipf:
+                        zipf.writestr("summary.json", json.dumps({"error": "ZIP generation failed", "generated_at": datetime.utcnow().isoformat()}, indent=2))
+                    logger.info(f"Created basic error ZIP at {output_path}")

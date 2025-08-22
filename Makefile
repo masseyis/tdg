@@ -19,6 +19,9 @@ test-ci:
 test-e2e:
 	pytest tests/test_e2e_functional.py::test_complete_user_experience -v -s --log-cli-level=INFO
 
+test-post-deploy:
+	pytest tests/test_post_deploy.py::test_deployed_service_complete_user_experience -v -s --log-cli-level=INFO
+
 # Linting
 lint:
 	ruff check app tests
