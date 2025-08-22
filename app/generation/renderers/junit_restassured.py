@@ -287,7 +287,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class ComprehensiveTestFlow extends BaseTest {{
+public class ComprehensiveTestFlow extends BaseTest {
 
     private static String createdPetId;
     private static String createdOrderId;
@@ -296,7 +296,7 @@ public class ComprehensiveTestFlow extends BaseTest {{
 
     @Test
     @Order(1)
-    void testUserLogin() {{
+    void testUserLogin() {
         // Test login functionality
         Response response = given()
             .contentType(ContentType.JSON)
@@ -309,11 +309,11 @@ public class ComprehensiveTestFlow extends BaseTest {{
             .extract().response();
 
         System.out.println("✅ User login test passed");
-    }}
+    }
 
     @Test
     @Order(2)
-    void testCreateUser() {{
+    void testCreateUser() {
         // Create a test user
         Map<String, Object> userData = new HashMap<>();
         userData.put("username", "testuser_" + System.currentTimeMillis());
@@ -336,11 +336,11 @@ public class ComprehensiveTestFlow extends BaseTest {{
             .extract().response();
 
         System.out.println("✅ Created user: " + createdUsername);
-    }}
+    }
 
     @Test
     @Order(3)
-    void testGetUser() {{
+    void testGetUser() {
         // Test getting the created user
         Response response = given()
             .contentType(ContentType.JSON)
@@ -351,11 +351,11 @@ public class ComprehensiveTestFlow extends BaseTest {{
             .extract().response();
 
         System.out.println("✅ Retrieved user: " + createdUsername);
-    }}
+    }
 
     @Test
     @Order(4)
-    void testGetExistingOrder() {{
+    void testGetExistingOrder() {
         // Test getting an existing order (order ID 1 should exist)
         Response response = given()
             .contentType(ContentType.JSON)
@@ -366,11 +366,11 @@ public class ComprehensiveTestFlow extends BaseTest {{
             .extract().response();
 
         System.out.println("✅ Retrieved existing order: 1");
-    }}
+    }
 
     @Test
     @Order(5)
-    void testGetInventory() {{
+    void testGetInventory() {
         // Test inventory endpoint with API key
         Map<String, String> authHeaders = getAuthHeaders();
 
@@ -384,11 +384,11 @@ public class ComprehensiveTestFlow extends BaseTest {{
             .extract().response();
 
         System.out.println("✅ Retrieved inventory");
-    }}
+    }
 
     @Test
     @Order(6)
-    void testUserLogout() {{
+    void testUserLogout() {
         // Test logout functionality
         Response response = given()
             .contentType(ContentType.JSON)
@@ -399,13 +399,13 @@ public class ComprehensiveTestFlow extends BaseTest {{
             .extract().response();
 
         System.out.println("✅ User logout test passed");
-    }}
+    }
 
     @Test
     @Order(7)
-    void testUpdateUser() {{
+    void testUpdateUser() {
         // Test updating the created user
-        if (createdUsername != null) {{
+        if (createdUsername != null) {
             Map<String, Object> userData = new HashMap<>();
             userData.put("username", createdUsername);
             userData.put("firstName", "Updated");
@@ -425,16 +425,16 @@ public class ComprehensiveTestFlow extends BaseTest {{
                 .extract().response();
 
             System.out.println("✅ Updated user: " + createdUsername);
-        }} else {{
+        } else {
             System.out.println("⚠️  Skipping user update - no username");
-        }}
-    }}
+        }
+    }
 
     @Test
     @Order(8)
-    void testDeleteUser() {{
+    void testDeleteUser() {
         // Clean up: Delete the created user
-        if (createdUsername != null) {{
+        if (createdUsername != null) {
             Response response = given()
                 .contentType(ContentType.JSON)
             .when()
@@ -444,11 +444,11 @@ public class ComprehensiveTestFlow extends BaseTest {{
                 .extract().response();
 
             System.out.println("✅ Deleted user: " + createdUsername);
-        }} else {{
+        } else {
             System.out.println("⚠️  Skipping user deletion - no username");
-        }}
-    }}
-}}"""
+        }
+    }
+}"""
 
 
 def _generate_oauth2_test_flow(api: Any) -> str:
@@ -471,32 +471,32 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class OAuth2TestFlow extends BaseTest {{
+public class OAuth2TestFlow extends BaseTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @Test
     @Order(1)
-    void testOAuth2Setup() {{
+    void testOAuth2Setup() {
         // Verify OAuth2 configuration is available
         String oauthTokenUrl = System.getProperty("oauth.tokenUrl");
         String oauthClientId = System.getProperty("oauth.clientId");
         String oauthUsername = System.getProperty("oauth.username");
         String oauthPassword = System.getProperty("oauth.password");
 
-        if (oauthTokenUrl != null && oauthClientId != null && oauthUsername != null && oauthPassword != null) {{
+        if (oauthTokenUrl != null && oauthClientId != null && oauthUsername != null && oauthPassword != null) {
             System.out.println("✅ OAuth2 configuration detected");
             System.out.println("  Token URL: " + oauthTokenUrl);
             System.out.println("  Client ID: " + oauthClientId);
             System.out.println("  Username: " + oauthUsername);
-        }} else {{
+        } else {
             System.out.println("⚠️  OAuth2 configuration not provided - using API key fallback");
-        }}
-    }}
+        }
+    }
 
     @Test
     @Order(2)
-    void testOAuth2TokenEndpoint() {{
+    void testOAuth2TokenEndpoint() {
         // Test that OAuth2 token endpoint exists and is accessible
         System.out.println("🔐 Testing OAuth2 token endpoint availability...");
 
@@ -515,11 +515,11 @@ public class OAuth2TestFlow extends BaseTest {{
         System.out.println("✅ OAuth2 token endpoint is available");
         System.out.println("  Status: " + response.getStatusCode() + " (Unauthorized - endpoint exists)");
         System.out.println("  Response: " + response.asString());
-    }}
+    }
 
     @Test
     @Order(3)
-    void testOAuth2DialogEndpoint() {{
+    void testOAuth2DialogEndpoint() {
         // Test that OAuth2 dialog endpoint exists and redirects properly
         System.out.println("🔐 Testing OAuth2 dialog endpoint...");
 
@@ -539,11 +539,11 @@ public class OAuth2TestFlow extends BaseTest {{
         System.out.println("✅ OAuth2 dialog endpoint is available");
         System.out.println("  Status: " + response.getStatusCode() + " (Redirect to login)");
         System.out.println("  Location: " + response.getHeader("Location"));
-    }}
+    }
 
     @Test
     @Order(4)
-    void testOAuth2ProtectedEndpointBehavior() {{
+    void testOAuth2ProtectedEndpointBehavior() {
         // Test OAuth2 protected endpoint behavior (should require OAuth2 token)
         System.out.println("🔐 Testing OAuth2 protected endpoint behavior...");
 
@@ -560,11 +560,11 @@ public class OAuth2TestFlow extends BaseTest {{
         System.out.println("✅ OAuth2 protected endpoint correctly requires OAuth2 token");
         System.out.println("  Status: " + response.getStatusCode() + " (Unauthorized - as expected)");
         System.out.println("  WWW-Authenticate: " + response.getHeader("WWW-Authenticate"));
-    }}
+    }
 
     @Test
     @Order(5)
-    void testOAuth2PetCreationBehavior() {{
+    void testOAuth2PetCreationBehavior() {
         // Test OAuth2 pet creation behavior (should require OAuth2 token)
         System.out.println("🔐 Testing OAuth2 pet creation behavior...");
 
@@ -577,7 +577,7 @@ public class OAuth2TestFlow extends BaseTest {{
         category.put("name", "dogs");
         petData.put("category", category);
 
-        petData.put("photoUrls", new String[]{{"http://example.com/photo.jpg"}});
+        petData.put("photoUrls", new String[]{"http://example.com/photo.jpg"});
 
         Response response = given()
             .contentType(ContentType.JSON)
@@ -592,29 +592,29 @@ public class OAuth2TestFlow extends BaseTest {{
         System.out.println("✅ OAuth2 pet creation correctly requires OAuth2 token");
         System.out.println("  Status: " + response.getStatusCode() + " (Unauthorized - as expected)");
         System.out.println("  WWW-Authenticate: " + response.getHeader("WWW-Authenticate"));
-    }}
+    }
 
     @Test
     @Order(6)
-    void testOAuth2AuthenticationMethod() {{
+    void testOAuth2AuthenticationMethod() {
         // Test that we're using the correct authentication method
         String oauthTokenUrl = System.getProperty("oauth.tokenUrl");
 
-        if (oauthTokenUrl != null) {{
+        if (oauthTokenUrl != null) {
             System.out.println("✅ Using OAuth2 authentication");
             System.out.println("  Authentication method: OAuth2 Password Grant");
-        }} else {{
+        } else {
             System.out.println("✅ Using API Key authentication");
             System.out.println("  Authentication method: API Key");
-        }}
+        }
 
         System.out.println("🔐 OAuth2 infrastructure is available:");
         System.out.println("  - Token endpoint: /oauth/token");
         System.out.println("  - Dialog endpoint: /api/oauth/dialog");
         System.out.println("  - Implicit flow configured");
         System.out.println("  - Requires proper client credentials for token access");
-    }}
-}}"""
+    }
+}"""
 
 
 def _generate_pom_xml(api: Any) -> str:

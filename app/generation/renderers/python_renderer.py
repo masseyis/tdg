@@ -171,7 +171,7 @@ class APITestRunner:
         # Apply path parameters
         path_params = test_case.get('path_params', {{}})
         for key, value in path_params.items():
-            url = url.replace(f'{{{{key}}}}', str(value))
+            url = url.replace('{{' + key + '}}', str(value))
         
         # Prepare request parameters
         headers = {{**test_case.get('headers', {{}})}}

@@ -181,7 +181,7 @@ class APITestRunner {{
         // Apply path parameters
         const pathParams = testCase.path_params || {{}};
         for (const [key, value] of Object.entries(pathParams)) {{
-            url = url.replace(`${{{{key}}}}`, value);
+            url = url.replace('{{' + key + '}}', value);
         }}
         
         // Prepare request configuration
