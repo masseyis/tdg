@@ -19,7 +19,11 @@ from app.utils.openapi_normalizer import normalize_openapi
 from app.utils.zipping import create_artifact_zip
 from app.generation.cases import generate_test_cases
 
-  # Configure logging
+# Global semaphore to limit concurrent requests
+import asyncio
+request_semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
+
+# Configure logging
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
@@ -58,6 +62,18 @@ async def health():
     return "OK"
 
 
+@app.get("/status")
+async def status():
+    """Get current service status and concurrency info"""
+    return {
+        "status": "healthy",
+        "concurrent_requests": request_semaphore._value,
+        "max_concurrent_requests": settings.max_concurrent_requests,
+        "ai_concurrency_limit": settings.ai_concurrency_limit,
+        "max_cases_per_endpoint": settings.max_cases_per_endpoint
+    }
+
+
 @app.post("/api/validate")
 async def validate_spec(request: ValidateRequest) -> ValidateResponse:
     """Validate an OpenAPI specification"""
@@ -90,10 +106,11 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
 @app.post("/api/generate")
 async def generate(request: GenerateRequest):
     """Generate test artifacts from OpenAPI spec"""
-    try:
-        # Load and normalize the spec
-        spec = await load_openapi_spec(request.openapi)
-        normalized = normalize_openapi(spec)
+    async with request_semaphore:  # Limit concurrent requests
+        try:
+            # Load and normalize the spec
+            spec = await load_openapi_spec(request.openapi)
+            normalized = normalize_openapi(spec)
 
         # Generate test cases
         artifacts = await generate_test_cases(
@@ -139,28 +156,29 @@ async def generate_ui(
     aiSpeed: str = Form("fast")
 ):
     """Handle form submission from UI"""
-    try:
-        # Prepare OpenAPI input
-        openapi_input = None
-        if file and file.filename:
-            content = await file.read()
-            openapi_input = base64.b64encode(content).decode()
-        elif specUrl:
-            openapi_input = specUrl
-        else:
-            raise ValueError("Please upload an OpenAPI specification file (.json, .yaml, .yml) or provide a URL to your OpenAPI spec")
+    async with request_semaphore:  # Limit concurrent requests
+        try:
+            # Prepare OpenAPI input
+            openapi_input = None
+            if file and file.filename:
+                content = await file.read()
+                openapi_input = base64.b64encode(content).decode()
+            elif specUrl:
+                openapi_input = specUrl
+            else:
+                raise ValueError("Please upload an OpenAPI specification file (.json, .yaml, .yml) or provide a URL to your OpenAPI spec")
 
-        # Call generation API
-        gen_request = GenerateRequest(
-            openapi=openapi_input,
-            casesPerEndpoint=casesPerEndpoint,
-            outputs=outputs,
-            domainHint=domainHint,
-            seed=seed,
-            aiSpeed=aiSpeed
-        )
+            # Call generation API
+            gen_request = GenerateRequest(
+                openapi=openapi_input,
+                casesPerEndpoint=casesPerEndpoint,
+                outputs=outputs,
+                domainHint=domainHint,
+                seed=seed,
+                aiSpeed=aiSpeed
+            )
 
-        return await generate(gen_request)
+            return await generate(gen_request)
 
     except ValueError as e:
         logger.error(f"UI validation error: {e}")

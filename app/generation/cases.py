@@ -1,4 +1,5 @@
 """Test case generation orchestration"""
+import asyncio
 import logging
 from typing import Dict, Any, List
 from app.ai.base import get_provider, get_provider_for_speed
@@ -14,6 +15,10 @@ from app.generation.renderers import (
     python_renderer,
     nodejs_renderer
 )
+
+# Global semaphore to limit concurrent AI requests
+from app.config import settings
+ai_semaphore = asyncio.Semaphore(settings.ai_concurrency_limit)
 
 logger = logging.getLogger(__name__)
 
@@ -52,24 +57,34 @@ async def generate_test_cases(
     provider = get_provider_for_speed(ai_speed)
     logger.info(f"Using provider: {provider.__class__.__name__} (speed: {ai_speed})")
 
-    # Generate cases for each endpoint
+    # Generate cases for each endpoint concurrently
+    async def process_endpoint(endpoint):
+        async with ai_semaphore:  # Limit concurrent AI requests
+            options = {
+                "count": cases_per_endpoint,
+                "domain_hint": domain_hint,
+                "seed": seed,
+                "speed": ai_speed
+            }
+
+            cases = await provider.generate_cases(endpoint, options)
+
+            # Validate and fix generated data
+            for case in cases:
+                if case.body and endpoint.request_body:
+                    if not validate_against_schema(case.body, endpoint.request_body):
+                        case.body = fix_data_for_schema(case.body, endpoint.request_body)
+
+            return cases
+
+    # Process all endpoints concurrently
+    logger.info(f"Processing {len(normalized_api.endpoints)} endpoints concurrently")
+    endpoint_tasks = [process_endpoint(endpoint) for endpoint in normalized_api.endpoints]
+    endpoint_results = await asyncio.gather(*endpoint_tasks)
+    
+    # Flatten results
     all_cases = []
-    for endpoint in normalized_api.endpoints:
-        options = {
-            "count": cases_per_endpoint,
-            "domain_hint": domain_hint,
-            "seed": seed,
-            "speed": ai_speed
-        }
-
-        cases = await provider.generate_cases(endpoint, options)
-
-        # Validate and fix generated data
-        for case in cases:
-            if case.body and endpoint.request_body:
-                if not validate_against_schema(case.body, endpoint.request_body):
-                    case.body = fix_data_for_schema(case.body, endpoint.request_body)
-
+    for cases in endpoint_results:
         all_cases.extend(cases)
 
     artifacts["total_cases"] = len(all_cases)
