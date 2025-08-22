@@ -73,7 +73,7 @@
             <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
                 <h2 class="text-xl font-semibold font-space-grotesk mb-4">Configuration</h2>
                 
-                <div class="grid md:grid-cols-2 gap-6">
+                <div class="grid md:grid-cols-3 gap-6">
                     <div>
                         <label for="casesPerEndpoint" class="block text-sm font-medium text-gray-300 mb-2">Test Cases per Endpoint</label>
                         <select name="casesPerEndpoint" id="casesPerEndpoint" 
@@ -97,6 +97,17 @@
                             <option value="healthcare">Healthcare</option>
                             <option value="social">Social Media</option>
                         </select>
+                    </div>
+                    
+                    <div>
+                        <label for="aiSpeed" class="block text-sm font-medium text-gray-300 mb-2">AI Generation Speed</label>
+                        <select name="aiSpeed" id="aiSpeed" 
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-teal-500 focus:outline-none">
+                            <option value="fast" selected>🚀 Fast (Recommended)</option>
+                            <option value="balanced">⚖️ Balanced</option>
+                            <option value="quality">🎯 Best Quality</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Fast: 2-5s, Balanced: 5-10s, Quality: 10-20s</p>
                     </div>
                 </div>
 

@@ -25,6 +25,17 @@ class AnthropicProvider(AIProvider):
         """Check if Anthropic API key is configured"""
         return bool(settings.anthropic_api_key)
 
+    def _get_model_config(self, speed: str) -> tuple[str, float, int]:
+        """Get model configuration based on speed preference"""
+        if speed == "fast":
+            return "claude-3-haiku-20240307", 0.3, 1000  # Fastest model, lower temperature, fewer tokens
+        elif speed == "balanced":
+            return settings.anthropic_model, settings.ai_temperature, settings.ai_max_tokens
+        elif speed == "quality":
+            return "claude-3-opus-20240229", 0.7, 3000  # Best quality model, higher temperature, more tokens
+        else:
+            return settings.anthropic_model, settings.ai_temperature, settings.ai_max_tokens
+
     async def generate_cases(
         self,
         endpoint: Any,
@@ -39,10 +50,14 @@ class AnthropicProvider(AIProvider):
         try:
             prompt = get_test_generation_prompt(endpoint, options)
 
+            # Get model configuration based on speed preference
+            speed = options.get("speed", "fast")
+            model, temperature, max_tokens = self._get_model_config(speed)
+            
             message = self.client.messages.create(
-                model="claude-3-haiku-20240307",
-                max_tokens=2000,
-                temperature=0.7,
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temperature,
                 system="You are a test data generation expert. "
                        "Generate test cases as valid JSON.",
                 messages=[

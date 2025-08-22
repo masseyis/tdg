@@ -13,6 +13,7 @@ class GenerateRequest(BaseModel):
     )
     domainHint: Optional[str] = Field(None, description="Domain context hint")
     seed: Optional[int] = Field(None, description="Random seed for reproducibility")
+    aiSpeed: str = Field("fast", description="AI generation speed: fast, balanced, quality")
 
     @validator("outputs")
 

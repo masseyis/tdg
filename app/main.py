@@ -101,7 +101,8 @@ async def generate(request: GenerateRequest):
             cases_per_endpoint=request.casesPerEndpoint,
             outputs=request.outputs,
             domain_hint=request.domainHint,
-            seed=request.seed
+            seed=request.seed,
+            ai_speed=request.aiSpeed
         )
 
         # Create ZIP file
@@ -134,7 +135,8 @@ async def generate_ui(
     casesPerEndpoint: int = Form(10),
     outputs: List[str] = Form(["junit", "python", "nodejs", "postman"]),
     domainHint: Optional[str] = Form(None),
-    seed: Optional[int] = Form(None)
+    seed: Optional[int] = Form(None),
+    aiSpeed: str = Form("fast")
 ):
     """Handle form submission from UI"""
     try:
@@ -154,7 +156,8 @@ async def generate_ui(
             casesPerEndpoint=casesPerEndpoint,
             outputs=outputs,
             domainHint=domainHint,
-            seed=seed
+            seed=seed,
+            aiSpeed=aiSpeed
         )
 
         return await generate(gen_request)

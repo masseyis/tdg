@@ -23,7 +23,8 @@ async def generate_test_cases(
     cases_per_endpoint: int = 10,
     outputs: List[str] = None,
     domain_hint: str = None,
-    seed: int = None
+    seed: int = None,
+    ai_speed: str = "fast"
 ) -> Dict[str, Any]:
     """
     Generate test cases and artifacts
@@ -47,9 +48,9 @@ async def generate_test_cases(
         "total_cases": 0
     }
 
-    # Get AI provider
-    provider = get_provider()
-    logger.info(f"Using provider: {provider.__class__.__name__}")
+    # Get AI provider based on speed preference
+    provider = get_provider_for_speed(ai_speed)
+    logger.info(f"Using provider: {provider.__class__.__name__} (speed: {ai_speed})")
 
     # Generate cases for each endpoint
     all_cases = []
@@ -57,7 +58,8 @@ async def generate_test_cases(
         options = {
             "count": cases_per_endpoint,
             "domain_hint": domain_hint,
-            "seed": seed
+            "seed": seed,
+            "speed": ai_speed
         }
 
         cases = await provider.generate_cases(endpoint, options)

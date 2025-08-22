@@ -20,6 +20,15 @@ class Settings(BaseSettings):
     # AI Provider settings (optional)
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
+    
+    # AI Model settings for speed/quality tradeoff
+    openai_model: str = "gpt-3.5-turbo"  # Options: gpt-4o-mini (fastest), gpt-3.5-turbo (balanced), gpt-4o (best quality)
+    anthropic_model: str = "claude-3-haiku-20240307"  # Options: claude-3-haiku-20240307 (fastest), claude-3-sonnet-20240229 (balanced), claude-3-opus-20240229 (best quality)
+    
+    # AI Generation settings
+    ai_temperature: float = 0.7  # Lower = more consistent, faster
+    ai_max_tokens: int = 2000  # Lower = faster generation
+    ai_timeout: int = 15  # Shorter timeout for faster fallback
 
 
     class Config:

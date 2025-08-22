@@ -24,6 +24,17 @@ class OpenAIProvider(AIProvider):
         """Check if OpenAI API key is configured"""
         return bool(settings.openai_api_key)
 
+    def _get_model_config(self, speed: str) -> tuple[str, float, int]:
+        """Get model configuration based on speed preference"""
+        if speed == "fast":
+            return "gpt-4o-mini", 0.3, 1000  # Fastest model, lower temperature, fewer tokens
+        elif speed == "balanced":
+            return settings.openai_model, settings.ai_temperature, settings.ai_max_tokens
+        elif speed == "quality":
+            return "gpt-4o", 0.7, 3000  # Best quality model, higher temperature, more tokens
+        else:
+            return settings.openai_model, settings.ai_temperature, settings.ai_max_tokens
+
     async def generate_cases(
         self,
         endpoint: Any,
@@ -38,15 +49,21 @@ class OpenAIProvider(AIProvider):
         try:
             prompt = get_test_generation_prompt(endpoint, options)
 
+            # Get model configuration based on speed preference
+            speed = options.get("speed", "fast")
+            model, temperature, max_tokens = self._get_model_config(speed)
+            
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=model,
                 messages=[
                     {"role": "system", "content": "You are a test data generation expert. "
                                                   "Generate test cases as valid JSON."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.7,
-                response_format={"type": "json_object"}
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_format={"type": "json_object"},
+                timeout=settings.ai_timeout
             )
 
             content = response.choices[0].message.content
