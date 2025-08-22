@@ -112,36 +112,36 @@ async def generate(request: GenerateRequest):
             spec = await load_openapi_spec(request.openapi)
             normalized = normalize_openapi(spec)
 
-        # Generate test cases
-        artifacts = await generate_test_cases(
-            normalized,
-            cases_per_endpoint=request.casesPerEndpoint,
-            outputs=request.outputs,
-            domain_hint=request.domainHint,
-            seed=request.seed,
-            ai_speed=request.aiSpeed
-        )
+            # Generate test cases
+            artifacts = await generate_test_cases(
+                normalized,
+                cases_per_endpoint=request.casesPerEndpoint,
+                outputs=request.outputs,
+                domain_hint=request.domainHint,
+                seed=request.seed,
+                ai_speed=request.aiSpeed
+            )
 
-        # Create ZIP file
-        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
-            zip_path = Path(tmp.name)
-            create_artifact_zip(artifacts, zip_path)
+            # Create ZIP file
+            with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+                zip_path = Path(tmp.name)
+                create_artifact_zip(artifacts, zip_path)
 
-        # Return ZIP file
-        return FileResponse(
-            zip_path,
-            media_type="application/octet-stream",
-            filename="test-artifacts.zip",
-            headers={
-                "Content-Disposition": "attachment; filename=test-artifacts.zip"
-            }
-        )
+            # Return ZIP file
+            return FileResponse(
+                zip_path,
+                media_type="application/octet-stream",
+                filename="test-artifacts.zip",
+                headers={
+                    "Content-Disposition": "attachment; filename=test-artifacts.zip"
+                }
+            )
 
-    except ValidationError as e:
-        raise HTTPException(status_code=422, detail=e.errors())
-    except Exception as e:
-        logger.error(f"Generation error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        except ValidationError as e:
+            raise HTTPException(status_code=422, detail=e.errors())
+        except Exception as e:
+            logger.error(f"Generation error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/generate-ui")
@@ -180,14 +180,14 @@ async def generate_ui(
 
             return await generate(gen_request)
 
-    except ValueError as e:
-        logger.error(f"UI validation error: {e}")
-        # Return a 400 Bad Request for validation errors
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"UI generation error: {e}")
-        # Return a proper error response instead of HTML template
-        raise HTTPException(status_code=500, detail=str(e))
+        except ValueError as e:
+            logger.error(f"UI validation error: {e}")
+            # Return a 400 Bad Request for validation errors
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.error(f"UI generation error: {e}")
+            # Return a proper error response instead of HTML template
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.exception_handler(404)
