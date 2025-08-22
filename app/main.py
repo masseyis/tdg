@@ -139,21 +139,21 @@ async def generate(request: GenerateRequest):
                 zip_path = Path(tmp.name)
                 create_artifact_zip(artifacts, zip_path)
 
-                    # Return ZIP file
-        response = FileResponse(
-            zip_path,
-            media_type="application/octet-stream",
-            filename="test-artifacts.zip",
-            headers={
-                "Content-Disposition": "attachment; filename=test-artifacts.zip"
-            }
-        )
-        
-        # Clean up memory after generation
-        del artifacts
-        gc.collect()
-        
-        return response
+            # Return ZIP file
+            response = FileResponse(
+                zip_path,
+                media_type="application/octet-stream",
+                filename="test-artifacts.zip",
+                headers={
+                    "Content-Disposition": "attachment; filename=test-artifacts.zip"
+                }
+            )
+            
+            # Clean up memory after generation
+            del artifacts
+            gc.collect()
+            
+            return response
 
         except ValidationError as e:
             raise HTTPException(status_code=422, detail=e.errors())
