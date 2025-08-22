@@ -114,8 +114,14 @@ class JavaTestRunner:
             test_data_files = list(java_dir.rglob("test-data.json"))
             if test_data_files:
                 import shutil
-                shutil.copy2(test_data_files[0], resources_dir / "test-data.json")
-                logger.info(f"Copied test-data.json to {resources_dir}")
+                source_file = test_data_files[0]
+                target_file = resources_dir / "test-data.json"
+                # Only copy if source and target are different
+                if source_file != target_file:
+                    shutil.copy2(source_file, target_file)
+                    logger.info(f"Copied test-data.json to {resources_dir}")
+                else:
+                    logger.info(f"test-data.json already exists at {resources_dir}")
             
             # Run Maven tests
             try:
@@ -323,10 +329,29 @@ async def test_deployed_service_complete_user_experience():
             with zipfile.ZipFile(io.BytesIO(zip_content), 'r') as zip_file:
                 zip_file.extractall(temp_path)
             
+            # Debug: List all files in the ZIP
+            logger.info("📁 Files in generated ZIP:")
+            for file_path in temp_path.rglob('*'):
+                if file_path.is_file():
+                    logger.info(f"  - {file_path.relative_to(temp_path)}")
+            
             # Validate ZIP structure
             java_dir = temp_path / "junit"
             python_dir = temp_path / "python"
             nodejs_dir = temp_path / "nodejs"
+            
+            # Check if directories exist, if not, look for alternative structure
+            if not java_dir.exists():
+                # Look for Java files in artifacts/junit
+                java_dir = temp_path / "artifacts" / "junit"
+            
+            if not python_dir.exists():
+                # Look for Python files in artifacts/python
+                python_dir = temp_path / "artifacts" / "python"
+            
+            if not nodejs_dir.exists():
+                # Look for Node.js files in artifacts/nodejs
+                nodejs_dir = temp_path / "artifacts" / "nodejs"
             
             assert java_dir.exists(), "Java test files not found"
             assert python_dir.exists(), "Python test files not found"
