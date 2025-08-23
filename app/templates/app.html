@@ -274,16 +274,8 @@
             submitBtn.disabled = true;
             
             try {
-                // Start progress polling
-                const progressInterval = startProgressPolling();
-                
-                const response = await fetch('/generate-ui', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                // Stop progress polling
-                clearInterval(progressInterval);
+                // Start WebSocket connection for real-time progress
+                const taskId = await startGenerationTask(formData);
                 
                 if (response.ok) {
                     const blob = await response.blob();
@@ -314,42 +306,132 @@
             }
         });
         
-        // Progress polling function
-        function startProgressPolling() {
-            // For now, we'll simulate progress since the backend progress tracking
-            // would require more complex request ID handling
-            let currentStep = 0;
-            const steps = [
-                { id: 'step1', text: 'Processing OpenAPI specification', progress: 25 },
-                { id: 'step2', text: 'Generating test cases with AI', progress: 50 },
-                { id: 'step3', text: 'Creating test artifacts', progress: 75 },
-                { id: 'step4', text: 'Building ZIP file', progress: 100 }
-            ];
-            
-            return setInterval(() => {
-                if (currentStep < steps.length) {
-                    updateProgressStep(steps[currentStep]);
-                    currentStep++;
+        // WebSocket-based progress tracking
+        let websocket = null;
+        
+        async function startGenerationTask(formData) {
+            try {
+                // Start the generation task
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        spec: await formDataToSpec(formData),
+                        casesPerEndpoint: parseInt(formData.get('casesPerEndpoint')),
+                        outputs: formData.getAll('outputs'),
+                        domainHint: formData.get('domainHint'),
+                        seed: formData.get('seed') ? parseInt(formData.get('seed')) : null,
+                        aiSpeed: formData.get('aiSpeed')
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-            }, 2000); // Update every 2 seconds
+                
+                const result = await response.json();
+                const taskId = result.task_id;
+                
+                // Connect to WebSocket for real-time progress
+                connectWebSocket(taskId);
+                
+                return taskId;
+                
+            } catch (error) {
+                console.error('Failed to start generation task:', error);
+                throw error;
+            }
         }
         
-        function updateProgressStep(step) {
-            // Update the step indicator
-            const stepElement = document.getElementById(step.id);
-            if (stepElement) {
-                const dot = stepElement.querySelector('div');
-                const text = stepElement.querySelector('span');
-                
-                // Update dot color
-                dot.className = 'w-4 h-4 rounded-full bg-teal-400 mr-3';
-                
-                // Update text color
-                stepElement.className = 'flex items-center text-teal-400';
-                
-                // Update progress message
-                document.querySelector('#loadingSpinner p.text-gray-300').textContent = 
-                    `${step.text}... (${step.progress}% complete)`;
+        async function formDataToSpec(formData) {
+            const file = formData.get('file');
+            const specUrl = formData.get('specUrl');
+            
+            if (file) {
+                // Handle file upload
+                return await file.text();
+            } else if (specUrl) {
+                // Handle URL
+                const response = await fetch(specUrl);
+                return await response.text();
+            } else {
+                throw new Error('No file or URL provided');
+            }
+        }
+        
+        function connectWebSocket(taskId) {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/${taskId}`;
+            
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = function(event) {
+                console.log('WebSocket connected for task:', taskId);
+            };
+            
+            websocket.onmessage = function(event) {
+                const progress = JSON.parse(event.data);
+                updateProgressFromWebSocket(progress);
+            };
+            
+            websocket.onclose = function(event) {
+                console.log('WebSocket closed for task:', taskId);
+                if (event.code !== 1000) {
+                    console.warn('WebSocket closed unexpectedly:', event.code, event.reason);
+                }
+            };
+            
+            websocket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        }
+        
+        function updateProgressFromWebSocket(progress) {
+            console.log('Progress update:', progress);
+            
+            // Update progress message
+            const progressMessage = document.querySelector('#loadingSpinner p.text-gray-300');
+            if (progressMessage) {
+                progressMessage.textContent = progress.message;
+            }
+            
+            // Update progress bar
+            const progressBar = document.querySelector('#progressBar');
+            if (progressBar) {
+                progressBar.style.width = `${progress.progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress.progress);
+            }
+            
+            // Update step indicators based on stage
+            updateStepIndicator(progress.stage, progress.progress);
+            
+            // Handle completion
+            if (progress.stage === 'complete') {
+                setTimeout(() => {
+                    hideLoadingSpinner();
+                    // TODO: Handle completion (download file, etc.)
+                }, 1000);
+            }
+        }
+        
+        function updateStepIndicator(stage, progress) {
+            const steps = {
+                'parsing': 'step1',
+                'generating': 'step2', 
+                'zipping': 'step3',
+                'complete': 'step4'
+            };
+            
+            const stepId = steps[stage];
+            if (stepId) {
+                const stepElement = document.getElementById(stepId);
+                if (stepElement) {
+                    const dot = stepElement.querySelector('div');
+                    stepElement.className = 'flex items-center text-teal-400';
+                    dot.className = 'w-4 h-4 rounded-full bg-teal-400 mr-3';
+                }
             }
         }
         
@@ -371,6 +453,12 @@
             <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-teal-400 mx-auto mb-4"></div>
             <h3 class="text-xl font-semibold font-space-grotesk mb-2">Generating Test Cases</h3>
             <p class="text-gray-300 mb-4">This may take a few minutes for complex APIs...</p>
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-700 rounded-full h-2 mb-4">
+                <div id="progressBar" class="bg-teal-400 h-2 rounded-full transition-all duration-300" 
+                     style="width: 0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
             
             <!-- Progress Steps -->
             <div class="space-y-2 text-sm">

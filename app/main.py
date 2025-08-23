@@ -6,8 +6,9 @@ import logging
 import tempfile
 from pathlib import Path
 from typing import List, Optional
+from fastapi import WebSocket, WebSocketDisconnect
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, BackgroundTasks
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -86,26 +87,43 @@ async def status():
         "memory_percent": round(memory_percent, 2) if memory_percent else None
     }
 
-# Global progress tracking
-generation_progress = {}
+# Import WebSocket manager
+from app.websocket_manager import websocket_manager
+
+@app.websocket("/ws/{task_id}")
+async def websocket_endpoint(websocket: WebSocket, task_id: str):
+    """WebSocket endpoint for real-time progress updates"""
+    await websocket.accept()
+    try:
+        await websocket_manager.connect(websocket, task_id)
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket disconnected for task {task_id}")
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
 
 @app.get("/progress/{request_id}")
 async def get_progress(request_id: str):
-    """Get progress for a specific generation request"""
-    return generation_progress.get(request_id, {
+    """Get progress for a specific generation request (fallback for non-WebSocket clients)"""
+    progress = websocket_manager.get_progress(request_id)
+    if progress:
+        return {
+            "stage": progress.stage,
+            "progress": progress.progress,
+            "message": progress.message,
+            "timestamp": progress.timestamp,
+            "endpoint_count": progress.endpoint_count,
+            "current_endpoint": progress.current_endpoint
+        }
+    return {
         "stage": "unknown",
         "progress": 0,
         "message": "Request not found"
-    })
-
-def update_progress(request_id: str, stage: str, progress: int, message: str = ""):
-    """Update progress for a generation request"""
-    generation_progress[request_id] = {
-        "stage": stage,
-        "progress": progress,
-        "message": message,
-        "timestamp": datetime.datetime.now().isoformat()
     }
+
+def update_progress(task_id: str, stage: str, progress: int, message: str = "", 
+                   endpoint_count: Optional[int] = None, current_endpoint: Optional[int] = None):
+    """Update progress for a generation request"""
+    websocket_manager.update_progress(task_id, stage, progress, message, endpoint_count, current_endpoint)
 
 
 @app.post("/api/validate")
@@ -138,65 +156,72 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
 
 
 @app.post("/api/generate")
-async def generate(request: GenerateRequest):
+async def generate(request: GenerateRequest, background_tasks: BackgroundTasks):
     """Generate test artifacts from OpenAPI spec"""
-    async with request_semaphore:  # Limit concurrent requests
-        try:
-            # Generate unique request ID for progress tracking
-            import uuid
-            request_id = str(uuid.uuid4())
-            update_progress(request_id, "parsing", 10, "Parsing OpenAPI specification...")
-            
-            # Load and normalize the spec
-            spec = await load_openapi_spec(request.openapi)
-            normalized = normalize_openapi(spec)
-            
-            update_progress(request_id, "parsing", 100, "OpenAPI specification parsed successfully")
-            update_progress(request_id, "generating", 20, "Generating test cases...")
+    # Generate unique request ID for progress tracking
+    import uuid
+    task_id = str(uuid.uuid4())
+    
+    # Start background task
+    background_tasks.add_task(
+        generate_test_artifacts_background,
+        task_id,
+        request
+    )
+    
+    # Return task ID immediately
+    return {"task_id": task_id, "status": "started"}
 
-            # Generate test cases
-            update_progress(request_id, "generating", 40, "Generating test cases with AI...")
-            artifacts = await generate_test_cases(
-                normalized,
-                cases_per_endpoint=request.casesPerEndpoint,
-                outputs=request.outputs,
-                domain_hint=request.domainHint,
-                seed=request.seed,
-                ai_speed=request.aiSpeed
-            )
-            
-            update_progress(request_id, "generating", 100, "Test cases generated successfully")
-            update_progress(request_id, "zipping", 20, "Creating ZIP file...")
+async def generate_test_artifacts_background(task_id: str, request: GenerateRequest):
+    """Background task for generating test artifacts"""
+    try:
+        update_progress(task_id, "parsing", 10, "Parsing OpenAPI specification...")
+        
+        # Load and normalize the spec
+        spec = await load_openapi_spec(request.openapi)
+        normalized = normalize_openapi(spec)
+        
+        update_progress(task_id, "parsing", 100, "OpenAPI specification parsed successfully")
+        update_progress(task_id, "generating", 20, f"Generating test cases for {len(normalized.endpoints)} endpoints...")
 
-            # Create ZIP file
-            with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
-                zip_path = Path(tmp.name)
-                create_artifact_zip(artifacts, zip_path)
-            
-            update_progress(request_id, "zipping", 100, "ZIP file created successfully")
-            update_progress(request_id, "complete", 100, "Generation complete!")
+        # Generate test cases with detailed progress
+        update_progress(task_id, "generating", 30, "Starting AI generation...")
+        artifacts = await generate_test_cases_with_progress(
+            task_id,
+            normalized,
+            cases_per_endpoint=request.casesPerEndpoint,
+            outputs=request.outputs,
+            domain_hint=request.domainHint,
+            seed=request.seed,
+            ai_speed=request.aiSpeed
+        )
+        
+        update_progress(task_id, "generating", 100, "Test cases generated successfully")
+        update_progress(task_id, "zipping", 20, "Creating ZIP file...")
 
-            # Return ZIP file
-            response = FileResponse(
-                zip_path,
-                media_type="application/octet-stream",
-                filename="test-artifacts.zip",
-                headers={
-                    "Content-Disposition": "attachment; filename=test-artifacts.zip"
-                }
-            )
-            
-            # Clean up memory after generation
-            del artifacts
-            gc.collect()
-            
-            return response
-
-        except ValidationError as e:
-            raise HTTPException(status_code=422, detail=e.errors())
-        except Exception as e:
-            logger.error(f"Generation error: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+        # Create ZIP file
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+            zip_path = Path(tmp.name)
+            create_artifact_zip(artifacts, zip_path)
+        
+        update_progress(task_id, "zipping", 100, "ZIP file created successfully")
+        update_progress(task_id, "complete", 100, "Generation complete! ZIP file ready for download.")
+        
+        # Store the result for later retrieval
+        # Note: In a production system, you'd store this in Redis/database
+        # For now, we'll just mark it as complete
+        
+        # Clean up memory after generation
+        del artifacts
+        gc.collect()
+        
+    except Exception as e:
+        logger.error(f"Background generation error: {e}")
+        update_progress(task_id, "error", 0, f"Generation failed: {str(e)}")
+    finally:
+        # Clean up task data after a delay
+        await asyncio.sleep(300)  # Keep for 5 minutes
+        websocket_manager.cleanup_task(task_id)
 
 
 @app.post("/generate-ui")

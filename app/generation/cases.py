@@ -146,3 +146,92 @@ async def generate_test_cases(
         )
 
     return artifacts
+
+async def generate_test_cases_with_progress(
+    task_id: str,
+    normalized_spec: NormalizedOpenAPI,
+    cases_per_endpoint: int = 10,
+    outputs: List[str] = None,
+    domain_hint: str = None,
+    seed: int = None,
+    ai_speed: str = "fast"
+) -> Dict[str, Any]:
+    """Generate test cases with real-time progress updates"""
+    from app.main import update_progress
+    
+    if outputs is None:
+        outputs = ["junit", "python", "nodejs", "postman"]
+    
+    if seed is not None:
+        set_faker_seed(seed)
+    
+    # Get AI provider based on speed preference
+    provider = get_provider_for_speed(ai_speed)
+    
+    if not provider.is_available():
+        logger.warning(f"AI provider for speed '{ai_speed}' not available, falling back to null provider")
+        provider = NullProvider()
+    
+    logger.info(f"Using provider: {provider.__class__.__name__} (speed: {ai_speed})")
+    
+    # Process endpoints with progress updates
+    total_endpoints = len(normalized_spec.endpoints)
+    update_progress(task_id, "generating", 30, f"Processing {total_endpoints} endpoints...")
+    
+    endpoint_results = []
+    for i, endpoint in enumerate(normalized_spec.endpoints):
+        # Update progress for each endpoint
+        progress = 30 + int((i / total_endpoints) * 60)  # 30% to 90%
+        update_progress(
+            task_id, 
+            "generating", 
+            progress, 
+            f"Generating test cases for endpoint {i+1}/{total_endpoints}: {endpoint.method} {endpoint.path}",
+            total_endpoints,
+            i + 1
+        )
+        
+        # Generate cases for this endpoint
+        cases = await provider.generate_cases(endpoint, {
+            "count": cases_per_endpoint,
+            "domain_hint": domain_hint,
+            "speed": ai_speed
+        })
+        
+        endpoint_results.append(cases)
+    
+    # Flatten results
+    all_cases = []
+    for cases in endpoint_results:
+        all_cases.extend(cases)
+    
+    # Clean up memory after processing
+    del endpoint_results
+    import gc
+    gc.collect()
+    
+    # Create test data JSON
+    test_data = create_test_data_json(all_cases)
+    
+    # Generate artifacts for each output format
+    artifacts = {}
+    
+    for output_format in outputs:
+        if output_format == "junit":
+            artifacts["junit"] = generate_junit_artifacts(all_cases, test_data)
+        elif output_format == "python":
+            artifacts["python"] = generate_python_artifacts(all_cases, test_data)
+        elif output_format == "nodejs":
+            artifacts["nodejs"] = generate_nodejs_artifacts(all_cases, test_data)
+        elif output_format == "postman":
+            artifacts["postman"] = generate_postman_artifacts(all_cases, test_data)
+        elif output_format == "csv":
+            artifacts["csv"] = generate_csv_artifacts(all_cases)
+        elif output_format == "sql":
+            artifacts["sql"] = generate_sql_artifacts(all_cases)
+        elif output_format == "json":
+            artifacts["json"] = test_data
+    
+    update_progress(task_id, "generating", 90, "Test cases generated, creating artifacts...")
+    
+    return artifacts
