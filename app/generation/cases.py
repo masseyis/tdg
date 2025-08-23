@@ -149,7 +149,7 @@ async def generate_test_cases(
 
 async def generate_test_cases_with_progress(
     task_id: str,
-    normalized_spec: NormalizedOpenAPI,
+    normalized_spec: Any,
     cases_per_endpoint: int = 10,
     outputs: List[str] = None,
     domain_hint: str = None,
