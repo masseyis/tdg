@@ -248,17 +248,41 @@ async def generate_ui(
             else:
                 raise ValueError("Please upload an OpenAPI specification file (.json, .yaml, .yml) or provide a URL to your OpenAPI spec")
 
-            # Call generation API
-            gen_request = GenerateRequest(
-                openapi=openapi_input,
-                casesPerEndpoint=casesPerEndpoint,
+            # For UI requests, generate synchronously (no background tasks)
+            # Load and normalize the spec
+            spec = await load_openapi_spec(openapi_input)
+            normalized = normalize_openapi(spec)
+
+            # Generate test cases
+            artifacts = await generate_test_cases(
+                normalized,
+                cases_per_endpoint=casesPerEndpoint,
                 outputs=outputs,
-                domainHint=domainHint,
+                domain_hint=domainHint,
                 seed=seed,
-                aiSpeed=aiSpeed
+                ai_speed=aiSpeed
             )
 
-            return await generate(gen_request)
+            # Create ZIP file
+            with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+                zip_path = Path(tmp.name)
+                create_artifact_zip(artifacts, zip_path)
+
+            # Return ZIP file
+            response = FileResponse(
+                zip_path,
+                media_type="application/octet-stream",
+                filename="test-artifacts.zip",
+                headers={
+                    "Content-Disposition": "attachment; filename=test-artifacts.zip"
+                }
+            )
+            
+            # Clean up memory after generation
+            del artifacts
+            gc.collect()
+            
+            return response
 
         except ValueError as e:
             logger.error(f"UI validation error: {e}")
