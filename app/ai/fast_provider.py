@@ -83,7 +83,29 @@ class FastAIProvider(AIProvider):
         )
 
         content = response.choices[0].message.content
-        data = json.loads(content)
+        
+        # Better JSON parsing with error handling
+        try:
+            data = json.loads(content)
+        except json.JSONDecodeError as e:
+            logger.warning(f"OpenAI returned invalid JSON: {e}")
+            logger.warning(f"Raw content: {content[:500]}...")
+            # Try to extract valid JSON from the response
+            try:
+                # Look for JSON-like content between braces
+                json_start = content.find("{")
+                json_end = content.rfind("}") + 1
+                if json_start >= 0 and json_end > json_start:
+                    json_content = content[json_start:json_end]
+                    data = json.loads(json_content)
+                else:
+                    raise ValueError("No valid JSON found in response")
+            except Exception as fallback_error:
+                logger.error(f"Failed to extract valid JSON: {fallback_error}")
+                # Fallback to null provider
+                from app.ai.null_provider import NullProvider
+                return await NullProvider().generate_cases(endpoint, options)
+        
         return self._parse_cases(data, endpoint)
 
     async def _generate_with_anthropic(self, endpoint: Any, options: Dict[str, Any]) -> List[TestCase]:
@@ -105,12 +127,29 @@ class FastAIProvider(AIProvider):
 
         # Extract JSON from response
         content = message.content[0].text
-        json_start = content.find("{")
-        json_end = content.rfind("}") + 1
-        if json_start >= 0 and json_end > json_start:
-            content = content[json_start:json_end]
-
-        data = json.loads(content)
+        
+        # Better JSON parsing with error handling
+        try:
+            # Look for JSON-like content between braces
+            json_start = content.find("{")
+            json_end = content.rfind("}") + 1
+            if json_start >= 0 and json_end > json_start:
+                json_content = content[json_start:json_end]
+                data = json.loads(json_content)
+            else:
+                raise ValueError("No valid JSON found in response")
+        except json.JSONDecodeError as e:
+            logger.warning(f"Anthropic returned invalid JSON: {e}")
+            logger.warning(f"Raw content: {content[:500]}...")
+            # Fallback to null provider
+            from app.ai.null_provider import NullProvider
+            return await NullProvider().generate_cases(endpoint, options)
+        except Exception as e:
+            logger.error(f"Failed to extract valid JSON from Anthropic: {e}")
+            # Fallback to null provider
+            from app.ai.null_provider import NullProvider
+            return await NullProvider().generate_cases(endpoint, options)
+        
         return self._parse_cases(data, endpoint)
 
     def _parse_cases(self, data: Dict[str, Any], endpoint: Any) -> List[TestCase]:

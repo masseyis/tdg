@@ -1,5 +1,6 @@
 """FastAPI main application"""
 import base64
+import datetime
 import gc
 import logging
 import tempfile
@@ -85,6 +86,27 @@ async def status():
         "memory_percent": round(memory_percent, 2) if memory_percent else None
     }
 
+# Global progress tracking
+generation_progress = {}
+
+@app.get("/progress/{request_id}")
+async def get_progress(request_id: str):
+    """Get progress for a specific generation request"""
+    return generation_progress.get(request_id, {
+        "stage": "unknown",
+        "progress": 0,
+        "message": "Request not found"
+    })
+
+def update_progress(request_id: str, stage: str, progress: int, message: str = ""):
+    """Update progress for a generation request"""
+    generation_progress[request_id] = {
+        "stage": stage,
+        "progress": progress,
+        "message": message,
+        "timestamp": datetime.datetime.now().isoformat()
+    }
+
 
 @app.post("/api/validate")
 async def validate_spec(request: ValidateRequest) -> ValidateResponse:
@@ -120,11 +142,20 @@ async def generate(request: GenerateRequest):
     """Generate test artifacts from OpenAPI spec"""
     async with request_semaphore:  # Limit concurrent requests
         try:
+            # Generate unique request ID for progress tracking
+            import uuid
+            request_id = str(uuid.uuid4())
+            update_progress(request_id, "parsing", 10, "Parsing OpenAPI specification...")
+            
             # Load and normalize the spec
             spec = await load_openapi_spec(request.openapi)
             normalized = normalize_openapi(spec)
+            
+            update_progress(request_id, "parsing", 100, "OpenAPI specification parsed successfully")
+            update_progress(request_id, "generating", 20, "Generating test cases...")
 
             # Generate test cases
+            update_progress(request_id, "generating", 40, "Generating test cases with AI...")
             artifacts = await generate_test_cases(
                 normalized,
                 cases_per_endpoint=request.casesPerEndpoint,
@@ -133,11 +164,17 @@ async def generate(request: GenerateRequest):
                 seed=request.seed,
                 ai_speed=request.aiSpeed
             )
+            
+            update_progress(request_id, "generating", 100, "Test cases generated successfully")
+            update_progress(request_id, "zipping", 20, "Creating ZIP file...")
 
             # Create ZIP file
             with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
                 zip_path = Path(tmp.name)
                 create_artifact_zip(artifacts, zip_path)
+            
+            update_progress(request_id, "zipping", 100, "ZIP file created successfully")
+            update_progress(request_id, "complete", 100, "Generation complete!")
 
             # Return ZIP file
             response = FileResponse(

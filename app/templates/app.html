@@ -274,10 +274,16 @@
             submitBtn.disabled = true;
             
             try {
+                // Start progress polling
+                const progressInterval = startProgressPolling();
+                
                 const response = await fetch('/generate-ui', {
                     method: 'POST',
                     body: formData
                 });
+                
+                // Stop progress polling
+                clearInterval(progressInterval);
                 
                 if (response.ok) {
                     const blob = await response.blob();
@@ -307,6 +313,45 @@
                 hideLoadingSpinner();
             }
         });
+        
+        // Progress polling function
+        function startProgressPolling() {
+            // For now, we'll simulate progress since the backend progress tracking
+            // would require more complex request ID handling
+            let currentStep = 0;
+            const steps = [
+                { id: 'step1', text: 'Processing OpenAPI specification', progress: 25 },
+                { id: 'step2', text: 'Generating test cases with AI', progress: 50 },
+                { id: 'step3', text: 'Creating test artifacts', progress: 75 },
+                { id: 'step4', text: 'Building ZIP file', progress: 100 }
+            ];
+            
+            return setInterval(() => {
+                if (currentStep < steps.length) {
+                    updateProgressStep(steps[currentStep]);
+                    currentStep++;
+                }
+            }, 2000); // Update every 2 seconds
+        }
+        
+        function updateProgressStep(step) {
+            // Update the step indicator
+            const stepElement = document.getElementById(step.id);
+            if (stepElement) {
+                const dot = stepElement.querySelector('div');
+                const text = stepElement.querySelector('span');
+                
+                // Update dot color
+                dot.className = 'w-4 h-4 rounded-full bg-teal-400 mr-3';
+                
+                // Update text color
+                stepElement.className = 'flex items-center text-teal-400';
+                
+                // Update progress message
+                document.querySelector('#loadingSpinner p.text-gray-300').textContent = 
+                    `${step.text}... (${step.progress}% complete)`;
+            }
+        }
         
         // Loading spinner functions
         function showLoadingSpinner() {
