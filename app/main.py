@@ -156,21 +156,70 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
 
 
 @app.post("/api/generate")
-async def generate(request: GenerateRequest, background_tasks: BackgroundTasks):
+async def generate(
+    request: GenerateRequest, 
+    background_tasks: BackgroundTasks = None,
+    use_background: bool = False
+):
     """Generate test artifacts from OpenAPI spec"""
-    # Generate unique request ID for progress tracking
-    import uuid
-    task_id = str(uuid.uuid4())
-    
-    # Start background task
-    background_tasks.add_task(
-        generate_test_artifacts_background,
-        task_id,
-        request
-    )
-    
-    # Return task ID immediately
-    return {"task_id": task_id, "status": "started"}
+    # Check if background processing is requested
+    if background_tasks and use_background:
+        # Generate unique request ID for progress tracking
+        import uuid
+        task_id = str(uuid.uuid4())
+        
+        # Start background task
+        background_tasks.add_task(
+            generate_test_artifacts_background,
+            task_id,
+            request
+        )
+        
+        # Return task ID immediately
+        return {"task_id": task_id, "status": "started"}
+    else:
+        # Synchronous generation (for direct API calls)
+        try:
+            # Load and normalize the spec
+            spec = await load_openapi_spec(request.openapi)
+            normalized = normalize_openapi(spec)
+
+            # Generate test cases
+            artifacts = await generate_test_cases(
+                normalized,
+                cases_per_endpoint=request.casesPerEndpoint,
+                outputs=request.outputs,
+                domain_hint=request.domainHint,
+                seed=request.seed,
+                ai_speed=request.aiSpeed
+            )
+
+            # Create ZIP file
+            with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+                zip_path = Path(tmp.name)
+                create_artifact_zip(artifacts, zip_path)
+
+            # Return ZIP file
+            response = FileResponse(
+                zip_path,
+                media_type="application/octet-stream",
+                filename="test-artifacts.zip",
+                headers={
+                    "Content-Disposition": "attachment; filename=test-artifacts.zip"
+                }
+            )
+            
+            # Clean up memory after generation
+            del artifacts
+            gc.collect()
+            
+            return response
+
+        except ValidationError as e:
+            raise HTTPException(status_code=422, detail=e.errors())
+        except Exception as e:
+            logger.error(f"Generation error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
 async def generate_test_artifacts_background(task_id: str, request: GenerateRequest):
     """Background task for generating test artifacts"""
