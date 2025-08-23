@@ -19,7 +19,7 @@ from app.schemas import GenerateRequest, ValidateRequest, ValidateResponse
 from app.utils.openapi_loader import load_openapi_spec
 from app.utils.openapi_normalizer import normalize_openapi
 from app.utils.zipping import create_artifact_zip
-from app.generation.cases import generate_test_cases
+from app.generation.cases import generate_test_cases, generate_test_cases_with_progress
 
 # Global semaphore to limit concurrent requests
 import asyncio

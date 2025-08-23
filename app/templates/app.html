@@ -274,8 +274,12 @@
             submitBtn.disabled = true;
             
             try {
-                // Start WebSocket connection for real-time progress
-                const taskId = await startGenerationTask(formData);
+                // For now, submit to the synchronous UI endpoint
+                // TODO: Implement full WebSocket flow with file download
+                const response = await fetch('/generate-ui', {
+                    method: 'POST',
+                    body: formData
+                });
                 
                 if (response.ok) {
                     const blob = await response.blob();
