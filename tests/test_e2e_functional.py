@@ -357,14 +357,74 @@ class WebUIDriver:
     def wait_for_generation_complete(self, timeout: int = 300) -> bool:
         """Wait for test generation to complete"""
         try:
-            # Wait for the loading spinner to disappear (indicating completion)
-            WebDriverWait(self.driver, timeout).until(
-                EC.invisibility_of_element_located((By.ID, "loadingSpinner"))
-            )
-            logger.info("✅ Test generation completed")
-            return True
+            logger.info("🔍 Looking for generation completion indicators...")
+            
+            # Check for various completion indicators
+            completion_indicators = [
+                # Look for loading spinner disappearance
+                (By.ID, "loadingSpinner"),
+                (By.CLASS_NAME, "loading"),
+                (By.CLASS_NAME, "spinner"),
+                # Look for success messages
+                (By.XPATH, "//*[contains(text(), 'completed')]"),
+                (By.XPATH, "//*[contains(text(), 'success')]"),
+                (By.XPATH, "//*[contains(text(), 'ready')]"),
+                # Look for download links
+                (By.XPATH, "//a[contains(@href, '.zip')]"),
+                (By.XPATH, "//a[contains(text(), 'download')]"),
+            ]
+            
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                try:
+                    # Check current page state
+                    current_url = self.driver.current_url
+                    page_source = self.driver.page_source.lower()
+                    
+                    # Log current state for debugging
+                    if time.time() - start_time > 30:  # Log every 30 seconds
+                        logger.info(f"⏳ Still waiting... Current URL: {current_url}")
+                        logger.info(f"⏳ Page contains 'error': {'error' in page_source}")
+                        logger.info(f"⏳ Page contains 'success': {'success' in page_source}")
+                    
+                    # Check for completion indicators
+                    for selector_type, selector_value in completion_indicators:
+                        try:
+                            if selector_type == By.ID:
+                                element = self.driver.find_element(selector_type, selector_value)
+                                if not element.is_displayed():
+                                    logger.info(f"✅ Found hidden completion indicator: {selector_value}")
+                                    return True
+                            else:
+                                element = self.driver.find_element(selector_type, selector_value)
+                                if element.is_displayed():
+                                    logger.info(f"✅ Found visible completion indicator: {selector_value}")
+                                    return True
+                        except:
+                            continue
+                    
+                    # Check for error indicators
+                    if "error" in page_source or "failed" in page_source:
+                        logger.error("❌ Page contains error indicators")
+                        return False
+                    
+                    # Check if we're still on the same page (form submission might redirect)
+                    if "/generate-ui" in current_url or "/result" in current_url:
+                        logger.info("✅ Page redirected to result/generate page")
+                        return True
+                    
+                    time.sleep(5)  # Check every 5 seconds
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️  Error checking completion: {e}")
+                    time.sleep(5)
+                    continue
+            
+            logger.error(f"❌ Test generation did not complete within {timeout} seconds")
+            return False
+            
         except Exception as e:
-            logger.error(f"Test generation did not complete within {timeout} seconds: {e}")
+            logger.error(f"❌ Failed to wait for generation completion: {e}")
             return False
     
     def get_downloaded_file_path(self) -> Optional[Path]:
