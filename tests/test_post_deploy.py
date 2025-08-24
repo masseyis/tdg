@@ -24,6 +24,7 @@ import asyncio
 import io
 import json
 import logging
+import os
 import subprocess
 import tempfile
 import time
@@ -295,6 +296,10 @@ class NodeTestRunner:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    not (os.getenv('CI') == 'true' or os.getenv('GITHUB_ACTIONS') == 'true'),
+    reason="This test only runs in CI/CD against the deployed site"
+)
 async def test_deployed_service_complete_user_experience():
     """
     CRITICAL: Post-deployment test against live site
@@ -307,6 +312,9 @@ async def test_deployed_service_complete_user_experience():
     
     IMPORTANT: This test validates the deployed service is working correctly
     and provides the same user experience as the local development environment.
+    
+    NOTE: This test is automatically skipped during local development and only
+    runs in CI/CD environments to validate the deployed service.
     """
     
     # Start mock service for testing generated code
