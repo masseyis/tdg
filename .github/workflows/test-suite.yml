@@ -31,16 +31,105 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install pytest-html pytest-xdist pytest-benchmark
         
-    - name: Run Python tests
+    - name: Run Python tests with detailed reporting
       run: |
-        python -m pytest tests/ -v --cov=app --cov-report=xml
+        # Run tests with multiple output formats for comprehensive reporting
+        python -m pytest tests/ -v \
+          --cov=app \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term-missing \
+          --html=test-results.html \
+          --self-contained-html \
+          --junit-xml=test-results.xml \
+          --durations=10 \
+          --benchmark-skip \
+          --tb=short
+        
+    - name: Generate coverage summary
+      run: |
+        # Extract coverage statistics for reporting
+        coverage report --show-missing > coverage-summary.txt
+        echo "=== COVERAGE SUMMARY ===" >> coverage-summary.txt
+        echo "Generated at: $(date)" >> coverage-summary.txt
+        echo "Commit: ${{ github.sha }}" >> coverage-summary.txt
+        echo "Branch: ${{ github.ref_name }}" >> coverage-summary.txt
         
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
         fail_ci_if_error: false
+        
+    - name: Upload test results as artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ github.run_number }}
+        path: |
+          test-results.html
+          test-results.xml
+          coverage-summary.txt
+          htmlcov/
+          coverage.xml
+        retention-days: 90
+        
+    - name: Generate test summary report
+      run: |
+        # Create a comprehensive test summary
+        echo "# 🧪 Test Execution Summary" > test-summary.md
+        echo "" >> test-summary.md
+        echo "## 📊 Test Results" >> test-summary.md
+        echo "- **Commit**: \`${{ github.sha }}\`" >> test-summary.md
+        echo "- **Branch**: \`${{ github.ref_name }}\`" >> test-summary.md
+        echo "- **Triggered by**: ${{ github.event_name }}" >> test-summary.md
+        echo "- **Timestamp**: $(date -u)" >> test-summary.md
+        echo "" >> test-summary.md
+        
+        # Extract test statistics from XML
+        if [ -f test-results.xml ]; then
+          TOTAL_TESTS=$(grep -c '<testcase' test-results.xml || echo "0")
+          FAILED_TESTS=$(grep -c '<failure' test-results.xml || echo "0")
+          SKIPPED_TESTS=$(grep -c '<skipped' test-results.xml || echo "0")
+          PASSED_TESTS=$((TOTAL_TESTS - FAILED_TESTS - SKIPPED_TESTS))
+          
+          echo "### 📈 Test Statistics" >> test-summary.md
+          echo "- **Total Tests**: $TOTAL_TESTS" >> test-summary.md
+          echo "- **Passed**: ✅ $PASSED_TESTS" >> test-summary.md
+          echo "- **Failed**: ❌ $FAILED_TESTS" >> test-summary.md
+          echo "- **Skipped**: ⏭️ $SKIPPED_TESTS" >> test-summary.md
+          echo "- **Success Rate**: $(( (PASSED_TESTS * 100) / TOTAL_TESTS ))%" >> test-summary.md
+          echo "" >> test-summary.md
+        fi
+        
+        # Extract coverage statistics
+        if [ -f coverage-summary.txt ]; then
+          echo "### 📊 Coverage Report" >> test-summary.md
+          echo '```' >> test-summary.md
+          cat coverage-summary.txt >> test-summary.md
+          echo '```' >> test-summary.md
+          echo "" >> test-summary.md
+        fi
+        
+        # Add performance metrics
+        echo "### ⚡ Performance Metrics" >> test-summary.md
+        echo "- **Runner**: ${{ runner.os }} (${{ runner.arch }})" >> test-summary.md
+        echo "- **Python Version**: 3.12" >> test-summary.md
+        echo "- **Workflow Run**: #${{ github.run_number }}" >> test-summary.md
+        echo "" >> test-summary.md
+        
+        echo "### 🔗 Artifacts" >> test-summary.md
+        echo "- **Test Results**: [HTML Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> test-summary.md
+        echo "- **Coverage Report**: [HTML Coverage](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> test-summary.md
+        echo "- **JUnit XML**: [Download](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> test-summary.md
+        
+    - name: Upload test summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-summary-${{ github.run_number }}
+        path: test-summary.md
+        retention-days: 90
         
     - name: Run linting
       run: |
@@ -67,15 +156,25 @@ jobs:
         
     - name: Test AI provider detection
       run: |
-        python -m pytest tests/test_ai_providers.py -v
+        python -m pytest tests/test_ai_providers.py -v --junit-xml=ai-providers-results.xml
         
     - name: Test enhanced generation
       run: |
-        python -m pytest tests/test_enhanced_ai.py -v
+        python -m pytest tests/test_enhanced_ai.py -v --junit-xml=enhanced-ai-results.xml
         
     - name: Test domain data generation
       run: |
-        python -m pytest tests/test_domain_data.py -v
+        python -m pytest tests/test_domain_data.py -v --junit-xml=domain-data-results.xml
+        
+    - name: Upload generation test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: generation-test-results-${{ github.run_number }}
+        path: |
+          ai-providers-results.xml
+          enhanced-ai-results.xml
+          domain-data-results.xml
+        retention-days: 90
         
   integration-tests:
     runs-on: ubuntu-latest
@@ -111,6 +210,14 @@ jobs:
         curl -f -X POST http://localhost:8000/api/generate \
           -H "Content-Type: application/json" \
           -d "{\"openapi\": \"$SPEC_B64\", \"outputs\": [\"json\"], \"casesPerEndpoint\": 2}" || exit 1
+        
+    - name: Upload integration test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: integration-test-results-${{ github.run_number }}
+        path: |
+          /tmp/spec.b64
+        retention-days: 90
 
   e2e-functional-test:
     runs-on: ubuntu-latest
@@ -138,4 +245,99 @@ jobs:
         
     - name: Run end-to-end functional test
       run: |
-        python -m pytest tests/test_e2e_functional.py::test_complete_user_experience -v -s --log-cli-level=INFO
+        python -m pytest tests/test_e2e_functional.py::test_complete_user_experience \
+          -v -s --log-cli-level=INFO \
+          --junit-xml=e2e-test-results.xml \
+          --html=e2e-test-results.html \
+          --self-contained-html
+        
+    - name: Upload E2E test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: e2e-test-results-${{ github.run_number }}
+        path: |
+          e2e-test-results.xml
+          e2e-test-results.html
+        retention-days: 90
+
+  test-summary:
+    runs-on: ubuntu-latest
+    needs: [python-tests, test-generation, integration-tests, e2e-functional-test]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts/
+        
+    - name: Generate comprehensive test summary
+      run: |
+        echo "# 🚀 Comprehensive Test Execution Summary" > comprehensive-test-summary.md
+        echo "" >> comprehensive-test-summary.md
+        echo "## 📅 Execution Details" >> comprehensive-test-summary.md
+        echo "- **Repository**: ${{ github.repository }}" >> comprehensive-test-summary.md
+        echo "- **Workflow**: ${{ github.workflow }}" >> comprehensive-test-summary.md
+        echo "- **Run Number**: #${{ github.run_number }}" >> comprehensive-test-summary.md
+        echo "- **Commit**: \`${{ github.sha }}\`" >> comprehensive-test-summary.md
+        echo "- **Branch**: \`${{ github.ref_name }}\`" >> comprehensive-test-summary.md
+        echo "- **Triggered by**: ${{ github.event_name }}" >> comprehensive-test-summary.md
+        echo "- **Timestamp**: $(date -u)" >> comprehensive-test-summary.md
+        echo "" >> comprehensive-test-summary.md
+        
+        echo "## 🧪 Job Status Summary" >> comprehensive-test-summary.md
+        echo "- **Python Tests**: ${{ needs.python-tests.result }}" >> comprehensive-test-summary.md
+        echo "- **Test Generation**: ${{ needs.test-generation.result }}" >> comprehensive-test-summary.md
+        echo "- **Integration Tests**: ${{ needs.integration-tests.result }}" >> comprehensive-test-summary.md
+        echo "- **E2E Tests**: ${{ needs.e2e-functional-test.result }}" >> comprehensive-test-summary.md
+        echo "" >> comprehensive-test-summary.md
+        
+        # Aggregate test results from all jobs
+        echo "## 📊 Aggregated Test Results" >> comprehensive-test-summary.md
+        if [ -f artifacts/test-results-${{ github.run_number }}/test-summary-${{ github.run_number }}/test-summary.md ]; then
+          cat artifacts/test-results-${{ github.run_number }}/test-summary-${{ github.run_number }}/test-summary.md >> comprehensive-test-summary.md
+        fi
+        
+        echo "## 🔗 Available Artifacts" >> comprehensive-test-summary.md
+        echo "### Test Results" >> comprehensive-test-summary.md
+        echo "- [Python Tests](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> comprehensive-test-summary.md
+        echo "- [Test Generation](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> comprehensive-test-summary.md
+        echo "- [Integration Tests](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> comprehensive-test-summary.md
+        echo "- [E2E Tests](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> comprehensive-test-summary.md
+        echo "" >> comprehensive-test-summary.md
+        
+        echo "### Coverage Reports" >> comprehensive-test-summary.md
+        echo "- [HTML Coverage Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> comprehensive-test-summary.md
+        echo "- [Coverage XML](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> comprehensive-test-summary.md
+        echo "" >> comprehensive-test-summary.md
+        
+        echo "## 📈 Historical Trends" >> comprehensive-test-summary.md
+        echo "View historical test results and coverage trends:" >> comprehensive-test-summary.md
+        echo "- [Codecov Coverage](https://codecov.io/gh/${{ github.repository }})" >> comprehensive-test-summary.md
+        echo "- [GitHub Actions History](https://github.com/${{ github.repository }}/actions)" >> comprehensive-test-summary.md
+        echo "- [Test Artifacts Archive](https://github.com/${{ github.repository }}/actions)" >> comprehensive-test-summary.md
+        
+    - name: Upload comprehensive summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: comprehensive-test-summary-${{ github.run_number }}
+        path: comprehensive-test-summary.md
+        retention-days: 90
+        
+    - name: Comment on PR with test summary
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('comprehensive-test-summary.md', 'utf8');
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
