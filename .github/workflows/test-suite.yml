@@ -157,15 +157,17 @@ jobs:
         echo "Testing health endpoint..."
         curl -f http://localhost:8000/health || exit 1
         
-        # Test API endpoint with base64 encoded spec
+        # Test API endpoint with a simple OpenAPI spec
         echo "Testing API generation endpoint..."
-        echo '{"openapi":"3.0.0","info":{"title":"Test API","version":"1.0.0"},"paths":{"\/test":{"get":{"responses":{"200":{"description":"OK"}}}}}}' | base64 -w 0 > /tmp/spec.b64
-        SPEC_B64=$(cat /tmp/spec.b64)
+        echo '{"openapi":"3.0.0","info":{"title":"Test API","version":"1.0.0"},"paths":{"\/test":{"get":{"responses":{"200":{"description":"OK"}}}}}}' > /tmp/test-spec.json
         
-        # Test the generate endpoint
-        response=$(curl -s -w "%{http_code}" -X POST http://localhost:8000/api/generate \
-          -H "Content-Type: application/json" \
-          -d "{\"openapi\": \"$SPEC_B64\", \"outputs\": [\"json\"], \"casesPerEndpoint\": 2}")
+        # Test the generate-ui endpoint (more suitable for integration testing)
+        response=$(curl -s -w "%{http_code}" -X POST http://localhost:8000/generate-ui \
+          -F "file=@/tmp/test-spec.json" \
+          -F "outputs=json" \
+          -F "casesPerEndpoint=2" \
+          -F "domainHint=test" \
+          -F "aiSpeed=fast")
         
         http_code="${response: -3}"
         body="${response%???}"
@@ -175,6 +177,7 @@ jobs:
         
         if [ "$http_code" != "200" ]; then
           echo "API test failed with HTTP code $http_code"
+          echo "Full response: $response"
           exit 1
         fi
         
