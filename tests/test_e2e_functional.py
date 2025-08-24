@@ -166,16 +166,32 @@ class WebUIDriver:
             chrome_options.add_argument("--disable-extensions")
             chrome_options.add_argument("--disable-plugins")
             chrome_options.add_argument("--disable-images")
-            chrome_options.add_argument("--disable-javascript")  # Disable JS for faster loading
-            chrome_options.add_argument("--timeout=30000")  # 30 second timeout
+            chrome_options.add_argument("--window-size=1920,1080")
+            chrome_options.add_argument("--remote-debugging-port=0")
+            chrome_options.add_argument("--disable-web-security")
+            chrome_options.add_argument("--allow-running-insecure-content")
             
             # Use webdriver-manager to automatically download and manage ChromeDriver
             service = Service(ChromeDriverManager().install())
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
             self.wait = WebDriverWait(self.driver, 30)  # 30 second timeout
             
-            logger.info("✅ Browser started successfully")
-            return True
+            # Verify browser is responsive by checking basic functionality
+            try:
+                # Simple test to ensure browser is working
+                self.driver.get("about:blank")
+                time.sleep(1)
+                
+                # Check if we can execute JavaScript
+                result = self.driver.execute_script("return 'browser working';")
+                if result != "browser working":
+                    raise Exception(f"Browser JavaScript not working - got: {result}")
+                
+                logger.info("✅ Browser started successfully and is responsive")
+                return True
+            except Exception as e:
+                logger.error(f"Browser responsiveness check failed: {e}")
+                return False
         except Exception as e:
             logger.error(f"Failed to start browser: {e}")
             return False
@@ -189,13 +205,43 @@ class WebUIDriver:
     def navigate_to_app(self):
         """Navigate to the app page"""
         try:
+            logger.info(f"🌐 Navigating to: {self.base_url}/app")
+            
+            # Navigate to the page
             self.driver.get(f"{self.base_url}/app")
-            # Wait for the page to load
-            self.wait.until(EC.presence_of_element_located((By.TAG_NAME, "form")))
-            logger.info("✅ Navigated to app page")
+            
+            # Wait for page to load and stabilize
+            time.sleep(2)
+            
+            # Check if page loaded successfully
+            if "app" not in self.driver.current_url.lower():
+                logger.error(f"❌ Navigation failed - current URL: {self.driver.current_url}")
+                return False
+            
+            # Wait for the form to be present
+            try:
+                self.wait.until(EC.presence_of_element_located((By.TAG_NAME, "form")))
+                logger.info("✅ Form element found on page")
+            except Exception as e:
+                logger.error(f"❌ Form element not found: {e}")
+                # Log page source for debugging
+                logger.error(f"Page source: {self.driver.page_source[:500]}...")
+                return False
+            
+            # Additional wait for page to be fully loaded
+            time.sleep(1)
+            
+            logger.info("✅ Successfully navigated to app page")
             return True
+            
         except Exception as e:
-            logger.error(f"Failed to navigate to app: {e}")
+            logger.error(f"❌ Failed to navigate to app: {e}")
+            # Log additional debugging info
+            try:
+                logger.error(f"Current URL: {self.driver.current_url}")
+                logger.error(f"Page title: {self.driver.title}")
+            except:
+                pass
             return False
     
     def upload_spec_file(self, spec_file: Path) -> bool:
