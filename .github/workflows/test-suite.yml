@@ -121,20 +121,74 @@ jobs:
         
     - name: Start test server
       run: |
-        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-        sleep 15
+        # Start the server in the background with proper logging
+        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info > server.log 2>&1 &
+        SERVER_PID=$!
+        
+        # Wait for server to start and be ready
+        echo "Waiting for server to start..."
+        for i in {1..30}; do
+          if curl -f http://localhost:8000/health > /dev/null 2>&1; then
+            echo "Server is ready after $i seconds"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "Server failed to start after 30 seconds"
+            echo "Server log:"
+            cat server.log
+            exit 1
+          fi
+          sleep 1
+        done
+        
+        # Verify server is running
+        if ! ps -p $SERVER_PID > /dev/null; then
+          echo "Server process is not running"
+          echo "Server log:"
+          cat server.log
+          exit 1
+        fi
+        
+        echo "Server started successfully with PID $SERVER_PID"
         
     - name: Run integration tests
       run: |
         # Test health endpoint
+        echo "Testing health endpoint..."
         curl -f http://localhost:8000/health || exit 1
         
         # Test API endpoint with base64 encoded spec
+        echo "Testing API generation endpoint..."
         echo '{"openapi":"3.0.0","info":{"title":"Test API","version":"1.0.0"},"paths":{"\/test":{"get":{"responses":{"200":{"description":"OK"}}}}}}' | base64 -w 0 > /tmp/spec.b64
         SPEC_B64=$(cat /tmp/spec.b64)
-        curl -f -X POST http://localhost:8000/api/generate \
+        
+        # Test the generate endpoint
+        response=$(curl -s -w "%{http_code}" -X POST http://localhost:8000/api/generate \
           -H "Content-Type: application/json" \
-          -d "{\"openapi\": \"$SPEC_B64\", \"outputs\": [\"json\"], \"casesPerEndpoint\": 2}" || exit 1
+          -d "{\"openapi\": \"$SPEC_B64\", \"outputs\": [\"json\"], \"casesPerEndpoint\": 2}")
+        
+        http_code="${response: -3}"
+        body="${response%???}"
+        
+        echo "Response HTTP code: $http_code"
+        echo "Response body: $body"
+        
+        if [ "$http_code" != "200" ]; then
+          echo "API test failed with HTTP code $http_code"
+          exit 1
+        fi
+        
+        echo "Integration tests completed successfully"
+        
+    - name: Cleanup test server
+      if: always()
+      run: |
+        # Kill the test server
+        if [ ! -z "$SERVER_PID" ]; then
+          kill $SERVER_PID 2>/dev/null || true
+        fi
+        # Also kill any uvicorn processes
+        pkill -f "uvicorn app.main:app" || true
 
   e2e-functional-test:
     runs-on: ubuntu-latest

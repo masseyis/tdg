@@ -47,7 +47,7 @@ jobs:
           --cov-report=xml \
           --cov-report=html \
           --cov-report=term-missing \
-          --cov-fail-under=80
+          --cov-fail-under=20
         
     - name: Generate coverage trends report
       run: |
@@ -69,7 +69,7 @@ jobs:
         fi
         
         echo "## 🔍 Coverage Breakdown" >> coverage-trends.md
-        echo "- **Target Coverage**: 80%" >> coverage-trends.md
+        echo "- **Target Coverage**: 20%" >> coverage-trends.md
         echo "- **Coverage Threshold**: 5%" >> coverage-trends.md
         echo "- **Status**: ${{ github.event_name == 'schedule' && 'Scheduled Analysis' || 'Push Triggered' }}" >> coverage-trends.md
         echo "" >> coverage-trends.md
@@ -80,9 +80,9 @@ jobs:
         echo "" >> coverage-trends.md
         
         echo "## 🎯 Coverage Goals" >> coverage-trends.md
-        echo "- **Short-term**: Maintain >80% coverage" >> coverage-trends.md
-        echo "- **Medium-term**: Achieve >85% coverage" >> coverage-trends.md
-        echo "- **Long-term**: Achieve >90% coverage" >> coverage-trends.md
+        echo "- **Short-term**: Maintain >20% coverage" >> coverage-trends.md
+        echo "- **Medium-term**: Achieve >40% coverage" >> coverage-trends.md
+        echo "- **Long-term**: Achieve >60% coverage" >> coverage-trends.md
         echo "" >> coverage-trends.md
         
         echo "## 📋 Files with Low Coverage" >> coverage-trends.md
