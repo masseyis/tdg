@@ -15,7 +15,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
         
@@ -52,7 +52,7 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
         fail_ci_if_error: false
         
     - name: Upload test results as artifacts
@@ -80,7 +80,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
         
@@ -110,7 +110,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
         
@@ -129,12 +129,11 @@ jobs:
         # Test health endpoint
         curl -f http://localhost:8000/health || exit 1
         
-        # Test API endpoint with base64 encoded spec
-        echo '{"openapi":"3.0.0","info":{"title":"Test API","version":"1.0.0"},"paths":{"\/test":{"get":{"responses":{"200":{"description":"OK"}}}}}}' | base64 -w 0 > /tmp/spec.b64
-        SPEC_B64=$(cat /tmp/spec.b64)
+        # Test API endpoint using multipart form-data as expected by the service
         curl -f -X POST http://localhost:8000/api/generate \
-          -H "Content-Type: application/json" \
-          -d "{\"openapi\": \"$SPEC_B64\", \"outputs\": [\"json\"], \"casesPerEndpoint\": 2}" || exit 1
+          -F "file=@tests/samples/simple-api.json;type=application/json" \
+          -F 'outputs=["json"]' \
+          -F "casesPerEndpoint=2" || exit 1
 
   e2e-functional-test:
     runs-on: ubuntu-latest
@@ -145,7 +144,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
         
@@ -154,6 +153,19 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: '11'
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Chrome
+      uses: browser-actions/setup-chrome@v1
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y maven
         
     - name: Install dependencies
       run: |
