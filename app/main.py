@@ -342,22 +342,32 @@ async def generate_ui(
     """Handle form submission from UI"""
     async with request_semaphore:  # Limit concurrent requests
         try:
+            logger.info(f"UI generation request received: file={file.filename if file else None}, specUrl={specUrl}, casesPerEndpoint={casesPerEndpoint}, outputs={outputs}, domainHint={domainHint}, seed={seed}, aiSpeed={aiSpeed}")
+            
             # Prepare OpenAPI input
             openapi_input = None
             if file and file.filename:
+                logger.info(f"Processing uploaded file: {file.filename}")
                 content = await file.read()
                 openapi_input = base64.b64encode(content).decode()
+                logger.info(f"File content encoded, length: {len(openapi_input)}")
             elif specUrl:
+                logger.info(f"Processing spec URL: {specUrl}")
                 openapi_input = specUrl
             else:
                 raise ValueError("Please upload an OpenAPI specification file (.json, .yaml, .yml) or provide a URL to your OpenAPI spec")
 
             # For UI requests, generate synchronously (no background tasks)
             # Load and normalize the spec
+            logger.info("Loading and normalizing OpenAPI spec...")
             spec = await load_openapi_spec(openapi_input)
+            logger.info(f"OpenAPI spec loaded, keys: {list(spec.keys()) if isinstance(spec, dict) else 'Not a dict'}")
+            
             normalized = normalize_openapi(spec)
+            logger.info(f"OpenAPI spec normalized, endpoints: {len(normalized.endpoints)}")
 
             # Generate test cases
+            logger.info("Generating test cases...")
             artifacts = await generate_test_cases(
                 normalized,
                 cases_per_endpoint=casesPerEndpoint,
@@ -366,11 +376,14 @@ async def generate_ui(
                 seed=seed,
                 ai_speed=aiSpeed
             )
+            logger.info(f"Test cases generated, artifacts: {list(artifacts.keys()) if isinstance(artifacts, dict) else 'Not a dict'}")
 
             # Create ZIP file
+            logger.info("Creating ZIP file...")
             with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
                 zip_path = Path(tmp.name)
                 create_artifact_zip(artifacts, zip_path)
+                logger.info(f"ZIP file created: {zip_path}")
 
             # Return ZIP file
             response = FileResponse(
@@ -386,6 +399,7 @@ async def generate_ui(
             del artifacts
             gc.collect()
             
+            logger.info("UI generation completed successfully")
             return response
 
         except ValueError as e:
@@ -394,6 +408,9 @@ async def generate_ui(
             raise HTTPException(status_code=400, detail=str(e))
         except Exception as e:
             logger.error(f"UI generation error: {e}")
+            logger.error(f"Error type: {type(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             # Return a proper error response instead of HTML template
             raise HTTPException(status_code=500, detail=str(e))
 

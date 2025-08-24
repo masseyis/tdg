@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """
-End-to-end functional test for the test generation service
+End-to-End Functional Tests
 
-This test validates the complete user experience:
-1. Starts the generator service
-2. Starts a mock API service 
-3. Opens a real browser and drives the web UI
-4. Uploads an OpenAPI spec via the web interface
-5. Generates test files for Java, Python, and Node.js
-6. Downloads and extracts the generated ZIP file
-7. Compiles and runs the generated tests against the mock service
-8. Validates that all frameworks work correctly
+⚠️  CRITICAL: This test MUST always pass and NEVER be disabled! ⚠️
+
+This test validates the complete user experience from frontend to backend,
+ensuring the entire system works correctly. If this test fails, it means
+there's a fundamental issue that needs to be fixed immediately.
+
+The e2e test is our primary integration test and must remain active at all times.
 """
 
 import asyncio
@@ -23,6 +21,7 @@ import time
 import zipfile
 from pathlib import Path
 from typing import Dict, Any, Optional
+import os
 
 import httpx
 import pytest
@@ -39,6 +38,114 @@ from tests.mock_service import MockService
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class WebService:
+    """Manages the main web service process"""
+    
+    def __init__(self, port: int = 8080):
+        self.port = port
+        self.process = None
+        
+    def start(self):
+        """Start the web service"""
+        try:
+            # Start the main service using uvicorn
+            cmd = [
+                "python", "-m", "uvicorn", 
+                "app.main:app", 
+                "--host", "0.0.0.0", 
+                "--port", str(self.port)
+            ]
+            
+            # Set up environment
+            env = os.environ.copy()
+            env['PYTHONPATH'] = str(Path(__file__).parent.parent)
+            
+            logger.info(f"Starting service with command: {' '.join(cmd)}")
+            logger.info(f"Working directory: {Path(__file__).parent.parent}")
+            logger.info(f"Python path: {env['PYTHONPATH']}")
+            
+            self.process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=Path(__file__).parent.parent,
+                env=env,
+                bufsize=1,
+                universal_newlines=True
+            )
+            
+            # Wait for service to be ready
+            max_attempts = 30
+            for attempt in range(max_attempts):
+                try:
+                    response = httpx.get(f"http://localhost:{self.port}/health", timeout=1)
+                    if response.status_code == 200:
+                        logger.info(f"✅ Web service started on port {self.port}")
+                        return True
+                except Exception as e:
+                    if attempt == 0:
+                        logger.info(f"Waiting for service to start (attempt {attempt + 1}/{max_attempts})...")
+                    elif attempt % 5 == 0:
+                        logger.info(f"Still waiting... (attempt {attempt + 1}/{max_attempts})")
+                
+                # Check if process is still running
+                if self.process.poll() is not None:
+                    # Process died, get error output
+                    stdout, stderr = self.process.communicate()
+                    logger.error(f"❌ Service process died unexpectedly")
+                    if stdout:
+                        logger.error(f"Stdout: {stdout}")
+                    if stderr:
+                        logger.error(f"Stderr: {stderr}")
+                    return False
+                
+                # Check for any output
+                if self.process.stdout:
+                    try:
+                        line = self.process.stdout.readline()
+                        if line:
+                            logger.info(f"Service: {line.strip()}")
+                    except:
+                        pass
+                
+                if self.process.stderr:
+                    try:
+                        line = self.process.stderr.readline()
+                        if line:
+                            logger.error(f"Service Error: {line.strip()}")
+                    except:
+                        pass
+                
+                time.sleep(1)
+            
+            # If we get here, service didn't start
+            logger.error(f"❌ Web service failed to start on port {self.port} after {max_attempts} attempts")
+            
+            # Get any output from the process
+            if self.process:
+                stdout, stderr = self.process.communicate()
+                if stdout:
+                    logger.error(f"Final stdout: {stdout}")
+                if stderr:
+                    logger.error(f"Final stderr: {stderr}")
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Failed to start web service: {e}")
+            return False
+    
+    def stop(self):
+        """Stop the web service"""
+        if self.process:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+            logger.info("✅ Web service stopped")
 
 
 class WebUIDriver:
@@ -128,14 +235,71 @@ class WebUIDriver:
     def submit_form(self) -> bool:
         """Submit the test generation form"""
         try:
+            # Capture console logs before submission
+            console_logs = self.driver.get_log('browser')
+            if console_logs:
+                logger.info("Browser console logs before submission:")
+                for log in console_logs:
+                    logger.info(f"  {log['level']}: {log['message']}")
+            
             # Find and click the submit button
             submit_button = self.driver.find_element(By.XPATH, "//button[@type='submit']")
-            submit_button.click()
+            logger.info(f"Found submit button: {submit_button.text}")
             
-            # Wait for the loading spinner to appear
-            self.wait.until(EC.presence_of_element_located((By.ID, "loadingSpinner")))
-            logger.info("✅ Form submitted, loading spinner appeared")
-            return True
+            # Check if form has required fields
+            form = self.driver.find_element(By.TAG_NAME, "form")
+            logger.info(f"Form action: {form.get_attribute('action')}")
+            logger.info(f"Form method: {form.get_attribute('method')}")
+            
+            # Check if file is uploaded
+            file_input = self.driver.find_element(By.NAME, "file")
+            if file_input.get_attribute('value'):
+                logger.info(f"File input has value: {file_input.get_attribute('value')}")
+            else:
+                logger.warning("File input has no value")
+            
+            # Submit the form
+            submit_button.click()
+            logger.info("Clicked submit button")
+            
+            # Wait a moment for any immediate errors
+            time.sleep(2)
+            
+            # Check for any JavaScript errors
+            console_logs_after = self.driver.get_log('browser')
+            if console_logs_after:
+                logger.info("Browser console logs after submission:")
+                for log in console_logs_after:
+                    logger.info(f"  {log['level']}: {log['message']}")
+            
+            # Check if we got redirected or if there's an error
+            current_url = self.driver.current_url
+            logger.info(f"Current URL after submission: {current_url}")
+            
+            # Look for loading spinner
+            try:
+                self.wait.until(EC.presence_of_element_located((By.ID, "loadingSpinner")))
+                logger.info("✅ Form submitted, loading spinner appeared")
+                return True
+            except Exception as e:
+                logger.error(f"Loading spinner not found: {e}")
+                
+                # Check if there's an error message
+                try:
+                    error_elements = self.driver.find_elements(By.CLASS_NAME, "error")
+                    if error_elements:
+                        for error in error_elements:
+                            logger.error(f"Error element found: {error.text}")
+                except:
+                    pass
+                
+                # Check page source for clues
+                page_source = self.driver.page_source
+                if "error" in page_source.lower() or "failed" in page_source.lower():
+                    logger.error("Page contains error indicators")
+                
+                return False
+                
         except Exception as e:
             logger.error(f"Failed to submit form: {e}")
             return False
@@ -426,22 +590,33 @@ class NodeTestRunner:
             return False
 
 
-@pytest.mark.skip(reason="Temporarily disabled - needs frontend/backend alignment update")
 def test_complete_user_experience():
     """Test the complete user experience end-to-end using real browser automation"""
     
-    # Step 1: Start the mock API service
+    # Step 1: Start the main web service
+    logger.info("🌐 Starting main web service...")
+    web_service = WebService(port=8080)
+    if not web_service.start():
+        assert False, "Failed to start main web service"
+    
+    # Step 2: Start the mock API service
     logger.info("🌐 Starting mock API service...")
     mock_service = MockService(Path("tests/samples/petstore-minimal.yaml"), port=8082)
     mock_service.start()
     
-    # Step 2: Start the web UI driver
+    # Step 3: Start the web UI driver
     logger.info("🌐 Starting web UI driver...")
     ui_driver = WebUIDriver("http://localhost:8080")
     
     try:
-        # Wait for mock service to be ready
-        time.sleep(2)
+        # Wait for services to be ready
+        time.sleep(3)
+        
+        # Verify main service is responding
+        with httpx.Client() as http_client:
+            response = http_client.get("http://localhost:8080/health")
+            assert response.status_code == 200, "Main service should be healthy"
+        logger.info("✅ Main service is responding")
         
         # Verify mock service is responding
         with httpx.Client() as http_client:
@@ -449,14 +624,14 @@ def test_complete_user_experience():
             assert response.status_code == 200, "Mock service should serve OpenAPI spec"
         logger.info("✅ Mock service is responding")
         
-        # Step 3: Start browser and navigate to app
+        # Step 4: Start browser and navigate to app
         if not ui_driver.start_browser():
             assert False, "Failed to start browser"
         
         if not ui_driver.navigate_to_app():
             assert False, "Failed to navigate to app page"
         
-        # Step 4: Upload OpenAPI spec and generate tests
+        # Step 5: Upload OpenAPI spec and generate tests
         logger.info("📝 Generating tests via web UI...")
         spec_file = Path("tests/samples/petstore-minimal.yaml")
         
@@ -469,17 +644,17 @@ def test_complete_user_experience():
         if not ui_driver.submit_form():
             assert False, "Failed to submit form"
         
-        # Step 5: Wait for generation to complete
+        # Step 6: Wait for generation to complete
         if not ui_driver.wait_for_generation_complete():
             assert False, "Test generation did not complete"
         
-        # Step 6: Get the downloaded ZIP file
+        # Step 7: Get the downloaded ZIP file
         logger.info("📦 Getting downloaded ZIP file...")
         zip_file_path = ui_driver.get_downloaded_file_path()
         if not zip_file_path:
             assert False, "Failed to get downloaded ZIP file"
         
-        # Step 7: Extract and run the generated tests
+        # Step 8: Extract and run the generated tests
         logger.info("🔍 Extracting and running generated tests...")
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -515,7 +690,7 @@ def test_complete_user_experience():
             # Test Node.js framework
             logger.info("🟢 Testing Node.js framework...")
             node_dir = temp_path / "artifacts" / "nodejs"
-            if python_dir.exists():
+            if node_dir.exists():
                 node_runner = NodeTestRunner()
                 node_success = node_runner.run_tests(node_dir, "http://localhost:8082")
                 assert node_success, "Node.js tests should run against the mock service"
@@ -523,13 +698,14 @@ def test_complete_user_experience():
             else:
                 logger.warning("⚠️  Node.js artifacts not found in generated ZIP")
         
-        # Step 8: Verify results
+        # Step 9: Verify results
         logger.info("✅ All tests passed! End-to-end test successful.")
         
     finally:
         # Clean up
         ui_driver.stop_browser()
         mock_service.stop()
+        web_service.stop()
         logger.info("🧹 Cleanup completed")
 
 

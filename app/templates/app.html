@@ -45,7 +45,7 @@
             <p class="text-gray-300">Upload your OpenAPI specification and get comprehensive test coverage</p>
         </div>
 
-        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        <form method="POST" action="/generate-ui" enctype="multipart/form-data" class="space-y-6" onsubmit="return handleFormSubmit(this)">
             <!-- File Upload Section -->
             <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
                 <h2 class="text-xl font-semibold font-space-grotesk mb-4">Upload OpenAPI Specification</h2>
@@ -239,76 +239,25 @@
             }
         }
 
-        // Form submission handling
-        document.querySelector('form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(e.target);
-            
-            // Handle custom domain hint
+        // Form now submits directly to /generate-ui endpoint
+        // Handle custom domain hint before submission
+        function handleFormSubmit(form) {
             const domainSelect = document.getElementById('domainHint');
             const customInput = document.getElementById('customDomainHint');
             
             if (domainSelect.value === 'custom' && customInput.value.trim()) {
                 // Replace the 'custom' value with the actual custom domain
-                formData.set('domainHint', customInput.value.trim());
-            }
-            
-            // Debug: Log what's in the form data
-            console.log('Form data contents:');
-            for (let [key, value] of formData.entries()) {
-                if (value instanceof File) {
-                    console.log(`${key}: File(${value.name}, ${value.size} bytes)`);
-                } else {
-                    console.log(`${key}: ${value}`);
-                }
+                const customDomainInput = document.createElement('input');
+                customDomainInput.type = 'hidden';
+                customDomainInput.name = 'domainHint';
+                customDomainInput.value = customInput.value.trim();
+                form.appendChild(customDomainInput);
             }
             
             // Show loading spinner
             showLoadingSpinner();
-            
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            
-            submitBtn.textContent = 'Generating...';
-            submitBtn.disabled = true;
-            
-            try {
-                // For now, submit to the synchronous UI endpoint
-                // TODO: Implement full WebSocket flow with file download
-                const response = await fetch('/generate-ui', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'test-artifacts.zip';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                    
-                    // Show results
-                    document.getElementById('results').classList.remove('hidden');
-                } else {
-                    const errorData = await response.json();
-                    const errorMessage = errorData.detail || 'Error generating test cases. Please try again.';
-                    console.error('Server error:', errorMessage);
-                    alert(errorMessage);
-                }
-            } catch (error) {
-                console.error('Network error:', error);
-                alert('Error generating test cases. Please try again.');
-            } finally {
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-                hideLoadingSpinner();
-            }
-        });
+            return true; // Allow form submission
+        }
         
         // WebSocket-based progress tracking
         let websocket = null;

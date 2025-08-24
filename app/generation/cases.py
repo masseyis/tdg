@@ -42,7 +42,16 @@ def create_test_data_json(cases):
 
 def generate_junit_artifacts(cases, test_data):
     """Generate JUnit artifacts"""
-    return junit_restassured.render(cases, test_data)
+    # Note: This function is deprecated and should not be used
+    # The renderer expects (cases, api, flows) but we only have cases and test_data
+    # For now, create a minimal API object with required fields
+    from types import SimpleNamespace
+    minimal_api = SimpleNamespace()
+    minimal_api.title = "API"
+    minimal_api.version = "1.0.0"
+    minimal_api.description = "Generated API"
+    
+    return junit_restassured.render(cases, minimal_api, [])
 
 
 def generate_python_artifacts(cases, test_data):
@@ -91,6 +100,13 @@ async def generate_test_cases(
     Returns:
         Dictionary of generated artifacts
     """
+    logger.info(f"generate_test_cases called with normalized_api type: {type(normalized_api)}")
+    logger.info(f"normalized_api has endpoints: {hasattr(normalized_api, 'endpoints')}")
+    if hasattr(normalized_api, 'endpoints'):
+        logger.info(f"normalized_api.endpoints count: {len(normalized_api.endpoints)}")
+    if hasattr(normalized_api, 'title'):
+        logger.info(f"normalized_api.title: {normalized_api.title}")
+    
     if outputs is None:
         outputs = ["junit", "python", "nodejs", "postman"]
 
@@ -147,19 +163,23 @@ async def generate_test_cases(
 
     # Generate artifacts for each output format
     if "junit" in outputs:
-        artifacts["junit"] = junit_restassured.render(all_cases, flows)
+        logger.info(f"Calling junit_restassured.render with all_cases type: {type(all_cases)}, normalized_api type: {type(normalized_api)}, flows type: {type(flows)}")
+        logger.info(f"normalized_api has title: {hasattr(normalized_api, 'title')}")
+        if hasattr(normalized_api, 'title'):
+            logger.info(f"normalized_api.title: {normalized_api.title}")
+        artifacts["junit"] = junit_restassured.render(all_cases, normalized_api, flows)
 
     if "postman" in outputs:
-        artifacts["postman"] = postman.render(all_cases, flows)
+        artifacts["postman"] = postman.render(all_cases, normalized_api, flows)
 
     if "wiremock" in outputs:
-        artifacts["wiremock"] = wiremock.render(all_cases, flows)
+        artifacts["wiremock"] = wiremock.render(all_cases, normalized_api, flows)
 
     if "python" in outputs:
-        artifacts["python"] = python_renderer.render(all_cases, flows)
+        artifacts["python"] = python_renderer.render(all_cases, normalized_api, flows)
 
     if "nodejs" in outputs:
-        artifacts["nodejs"] = nodejs_renderer.render(all_cases, flows)
+        artifacts["nodejs"] = nodejs_renderer.render(all_cases, normalized_api, flows)
 
     if "json" in outputs:
         artifacts["json"] = flows
