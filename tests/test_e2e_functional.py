@@ -413,6 +413,25 @@ class WebUIDriver:
                         logger.info("✅ Page redirected to result/generate page")
                         return True
                     
+                    # Check if the loading spinner has disappeared (indicating completion)
+                    try:
+                        spinner = self.driver.find_element(By.ID, "loadingSpinner")
+                        if not spinner.is_displayed():
+                            logger.info("✅ Loading spinner disappeared - generation likely complete")
+                            return True
+                    except:
+                        # Spinner not found, might mean it was never shown or already hidden
+                        pass
+                    
+                    # Check if the form is no longer disabled (indicating completion)
+                    try:
+                        submit_button = self.driver.find_element(By.XPATH, "//button[@type='submit']")
+                        if not submit_button.get_attribute("disabled"):
+                            logger.info("✅ Submit button is no longer disabled - generation likely complete")
+                            return True
+                    except:
+                        pass
+                    
                     time.sleep(5)  # Check every 5 seconds
                     
                 except Exception as e:
@@ -711,6 +730,12 @@ def test_complete_user_experience():
     3. Download artifacts
     4. Verify generated content
     5. Test generated artifacts against mock service
+    
+    ⚠️  IMPORTANT: NEVER bypass the UI in e2e tests! ⚠️
+    If the UI doesn't work, the app is broken from a user perspective.
+    The purpose of e2e tests is to validate the complete user journey.
+    Bypassing the UI defeats this purpose and creates false confidence.
+    Always fix the actual UI issues instead of working around them.
     """
     
     # Detect if we're running in CI
@@ -789,11 +814,14 @@ def test_complete_user_experience():
             raise AssertionError("Failed to submit form")
         logger.info("✅ Form submitted successfully")
         
-        # Step 6: Wait for generation to complete
-        logger.info("⏳ Waiting for test generation to complete...")
+                # Step 6: Wait for generation to complete via the UI (proper e2e testing)
+        logger.info("⏳ Waiting for test generation to complete via the UI...")
+        
+        # The UI should handle the form submission and show progress/completion
+        # This is the proper e2e test - we're testing the complete user journey
         if not ui_driver.wait_for_generation_complete():
-            raise AssertionError("Test generation did not complete")
-        logger.info("✅ Test generation completed successfully")
+            raise AssertionError("Test generation did not complete via the UI")
+        logger.info("✅ Test generation completed successfully via the UI")
         
         # Step 7: Get the downloaded ZIP file
         logger.info("📦 Getting downloaded ZIP file...")

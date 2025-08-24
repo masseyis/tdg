@@ -6,6 +6,28 @@
     <title>SpecMint - Generate Test Cases</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Global error handler to capture JavaScript errors
+        window.jsErrors = [];
+        window.addEventListener('error', function(e) {
+            window.jsErrors.push({
+                message: e.message,
+                filename: e.filename,
+                lineno: e.lineno,
+                colno: e.colno,
+                error: e.error ? e.error.stack : 'No stack trace'
+            });
+            console.error('JavaScript error captured:', e);
+        });
+        
+        // Capture unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(e) {
+            window.jsErrors.push({
+                type: 'unhandledrejection',
+                reason: e.reason
+            });
+            console.error('Unhandled promise rejection:', e.reason);
+        });
+        
         tailwind.config = {
             theme: {
                 extend: {
@@ -45,7 +67,7 @@
             <p class="text-gray-300">Upload your OpenAPI specification and get comprehensive test coverage</p>
         </div>
 
-        <form method="POST" action="/generate-ui" enctype="multipart/form-data" class="space-y-6" onsubmit="return handleFormSubmit(this)">
+        <form method="POST" action="/generate-ui" enctype="multipart/form-data" class="space-y-6" onsubmit="return handleFormSubmit(this, event)">
             <!-- File Upload Section -->
             <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
                 <h2 class="text-xl font-semibold font-space-grotesk mb-4">Upload OpenAPI Specification</h2>
@@ -241,7 +263,7 @@
 
         // Form now submits directly to /generate-ui endpoint
         // Handle custom domain hint before submission
-        function handleFormSubmit(form) {
+        function handleFormSubmit(form, event) {
             const domainSelect = document.getElementById('domainHint');
             const customInput = document.getElementById('customDomainHint');
             
@@ -256,7 +278,11 @@
             
             // Show loading spinner
             showLoadingSpinner();
-            return true; // Allow form submission
+            
+            // Allow the form to submit naturally to /generate-ui
+            // The browser will handle the ZIP file download automatically
+            // This is simpler and more reliable than manual handling
+            return true;
         }
         
         // WebSocket-based progress tracking
@@ -398,6 +424,42 @@
         function hideLoadingSpinner() {
             const spinner = document.getElementById('loadingSpinner');
             spinner.classList.add('hidden');
+        }
+        
+        function showSuccessMessage(message) {
+            // Create or update success message
+            let successDiv = document.getElementById('successMessage');
+            if (!successDiv) {
+                successDiv = document.createElement('div');
+                successDiv.id = 'successMessage';
+                successDiv.className = 'mt-4 p-4 bg-green-900 border border-green-700 rounded-lg text-green-100';
+                document.querySelector('form').appendChild(successDiv);
+            }
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function showErrorMessage(message) {
+            // Create or update error message
+            let errorDiv = document.getElementById('errorMessage');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.id = 'errorMessage';
+                errorDiv.className = 'mt-4 p-4 bg-red-900 border border-red-700 rounded-lg text-red-100';
+                document.querySelector('form').appendChild(errorDiv);
+            }
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            // Hide after 10 seconds
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 10000);
         }
     </script>
     
