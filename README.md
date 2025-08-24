@@ -21,7 +21,7 @@ A powerful OpenAPI test case generator that creates comprehensive test suites fo
 
 ## 📋 Prerequisites
 
-- Python 3.8+
+- Python 3.13+ (recommended) or Python 3.8+
 - Java 11+ (for running generated tests)
 - Maven (for running generated tests)
 - Internet connection (for OAuth2 token requests)
@@ -34,15 +34,42 @@ A powerful OpenAPI test case generator that creates comprehensive test suites fo
    cd tdg-mvp
    ```
 
-2. **Install dependencies**:
+2. **Set up the Python environment**:
    ```bash
-   make install
+   # Option 1: Use the setup script (recommended)
+   ./setup_env.sh
+   
+   # Option 2: Manual setup
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
    ```
 
-3. **Install development dependencies** (optional):
+3. **Activate the virtual environment**:
    ```bash
-   make install-dev
+   source venv/bin/activate
    ```
+
+## 🧪 Running Tests
+
+### Quick Test Run
+```bash
+# Use the test runner script
+./run_tests.sh
+
+# Or run manually
+source venv/bin/activate
+python3 -m pytest tests/ -v
+```
+
+### Running Specific Tests
+```bash
+# Run only end-to-end tests
+python3 -m pytest tests/test_e2e_functional.py -v
+
+# Run with coverage
+python3 -m pytest tests/ --cov=app --cov-report=html
+```
 
 ## 🚀 Quick Start
 

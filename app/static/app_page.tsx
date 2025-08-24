@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,18 +14,97 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 
+interface ProgressUpdate {
+  stage: string
+  progress: number
+  message: string
+  timestamp: string
+  endpoint_count?: number
+  current_endpoint?: number
+}
+
 export default function SpecMintApp() {
   const [isLoading, setIsLoading] = useState(false)
   const [hasResults, setHasResults] = useState(false)
   const [showError, setShowError] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [progressStage, setProgressStage] = useState("")
+  const [progressMessage, setProgressMessage] = useState("")
   const [dragActive, setDragActive] = useState(false)
   const [casesPerEndpoint, setCasesPerEndpoint] = useState(12)
   const [selectedOutputs, setSelectedOutputs] = useState<string[]>(["junit", "postman"])
   const [domainHint, setDomainHint] = useState("general")
   const [seed, setSeed] = useState("")
   const [specUrl, setSpecUrl] = useState("")
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [taskId, setTaskId] = useState<string | null>(null)
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
+  
+  const websocketRef = useRef<WebSocket | null>(null)
   const { toast } = useToast()
+
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      if (websocketRef.current) {
+        websocketRef.current.close()
+      }
+    }
+  }, [])
+
+  const connectWebSocket = (taskId: string) => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//${window.location.host}/ws/${taskId}`
+    
+    const ws = new WebSocket(wsUrl)
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected for task:', taskId)
+    }
+    
+    ws.onmessage = (event) => {
+      try {
+        const update: ProgressUpdate = JSON.parse(event.data)
+        setProgress(update.progress)
+        setProgressStage(update.stage)
+        setProgressMessage(update.message)
+        
+        // If generation is complete, enable download
+        if (update.stage === 'complete') {
+          setIsLoading(false)
+          setHasResults(true)
+          // The download URL will be available via the task completion
+          toast({
+            title: "Artifacts generated ✓",
+            description: "Your test cases have been generated successfully.",
+          })
+        }
+        
+        // If there's an error, show it
+        if (update.stage === 'error') {
+          setIsLoading(false)
+          setShowError(true)
+          toast({
+            title: "Generation failed",
+            description: update.message,
+            variant: "destructive"
+          })
+        }
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error)
+      }
+    }
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error)
+    }
+    
+    ws.onclose = () => {
+      console.log('WebSocket disconnected')
+    }
+    
+    websocketRef.current = ws
+  }
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -50,43 +129,118 @@ export default function SpecMintApp() {
 
       if (validTypes.includes(file.type) || validExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))) {
         console.log("[v0] Valid file dropped:", file.name)
-        // Handle file upload logic here
+        setUploadedFile(file)
       }
     }
   }
 
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setUploadedFile(file)
+    }
+  }
+
   const handleGenerate = async () => {
+    if (!uploadedFile && !specUrl) {
+      toast({
+        title: "No specification provided",
+        description: "Please upload a file or provide a URL",
+        variant: "destructive"
+      })
+      return
+    }
+
     setIsLoading(true)
     setShowError(false)
     setProgress(0)
+    setProgressStage("starting")
+    setProgressMessage("Initializing generation...")
+    setHasResults(false)
 
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 90) {
-          clearInterval(progressInterval)
-          return 90
-        }
-        return prev + 10
+    try {
+      // Create form data
+      const formData = new FormData()
+      if (uploadedFile) {
+        formData.append('file', uploadedFile)
+      } else if (specUrl) {
+        formData.append('specUrl', specUrl)
+      }
+      formData.append('casesPerEndpoint', casesPerEndpoint.toString())
+      formData.append('outputs', JSON.stringify(selectedOutputs))
+      formData.append('domainHint', domainHint)
+      if (seed) {
+        formData.append('seed', seed)
+      }
+      formData.append('aiSpeed', 'fast')
+      formData.append('use_background', 'true')
+
+      // Submit to background processing endpoint
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        body: formData
       })
-    }, 200)
 
-    // Simulate API call
-    setTimeout(() => {
-      clearInterval(progressInterval)
-      setProgress(100)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (result.task_id) {
+        setTaskId(result.task_id)
+        connectWebSocket(result.task_id)
+        
+        // Start progress tracking
+        setProgress(10)
+        setProgressStage("parsing")
+        setProgressMessage("Parsing OpenAPI specification...")
+      } else {
+        throw new Error('No task ID received')
+      }
+
+    } catch (error) {
+      console.error('Generation error:', error)
       setIsLoading(false)
-      setHasResults(true)
+      setShowError(true)
       toast({
-        title: "Artifacts minted ✓",
-        description: "Your test cases have been generated successfully.",
+        title: "Generation failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive"
       })
-    }, 3000)
+    }
   }
 
   const handleRetry = () => {
     setShowError(false)
     handleGenerate()
+  }
+
+  const handleDownload = async () => {
+    if (!taskId) return
+    
+    try {
+      // Get the generated file
+      const response = await fetch(`/api/download/${taskId}`)
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'test-artifacts.zip'
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      }
+    } catch (error) {
+      console.error('Download error:', error)
+      toast({
+        title: "Download failed",
+        description: "Failed to download generated artifacts",
+        variant: "destructive"
+      })
+    }
   }
 
   const outputOptions = [
@@ -96,6 +250,8 @@ export default function SpecMintApp() {
     { id: "json", label: "JSON" },
     { id: "csv", label: "CSV" },
     { id: "sql", label: "SQL" },
+    { id: "python", label: "Python" },
+    { id: "nodejs", label: "Node.js" },
   ]
 
   const mockResults = [
@@ -174,9 +330,20 @@ export default function SpecMintApp() {
                     <div className="text-4xl">📄</div>
                     <p className="text-gray-300">
                       Drop your OpenAPI spec here or{" "}
-                      <button className="text-teal-400 hover:text-teal-300 underline">browse files</button>
+                      <label className="text-teal-400 hover:text-teal-300 underline cursor-pointer">
+                        browse files
+                        <input
+                          type="file"
+                          accept=".json,.yaml,.yml,.txt"
+                          onChange={handleFileInput}
+                          className="hidden"
+                        />
+                      </label>
                     </p>
                     <p className="text-sm text-gray-500">Supports .yaml, .yml, .json files</p>
+                    {uploadedFile && (
+                      <p className="text-sm text-teal-400">✓ {uploadedFile.name}</p>
+                    )}
                   </div>
                 </div>
 
@@ -224,6 +391,7 @@ export default function SpecMintApp() {
                         <SelectItem value="ecommerce">E-commerce</SelectItem>
                         <SelectItem value="finance">Finance</SelectItem>
                         <SelectItem value="healthcare">Healthcare</SelectItem>
+                        <SelectItem value="petstore">Pet Store</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -301,10 +469,24 @@ export default function SpecMintApp() {
                 {isLoading && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-300">Generating test cases...</span>
+                      <span className="text-gray-300">
+                        {progressStage === "parsing" && "Parsing OpenAPI specification..."}
+                        {progressStage === "generating" && "Generating test cases..."}
+                        {progressStage === "zipping" && "Creating ZIP file..."}
+                        {progressStage === "complete" && "Generation complete!"}
+                        {progressStage === "starting" && "Initializing..."}
+                      </span>
                       <span className="text-sm text-gray-400">{progress}%</span>
                     </div>
                     <Progress value={progress} className="bg-gray-800" />
+                    {progressMessage && (
+                      <p className="text-sm text-gray-400">{progressMessage}</p>
+                    )}
+                    {progressStage === "generating" && progressMessage.includes("endpoint") && (
+                      <div className="text-xs text-gray-500">
+                        Processing endpoints... This may take a few minutes for complex APIs.
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -349,7 +531,12 @@ export default function SpecMintApp() {
 
                     {/* Action buttons */}
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <Button className="bg-teal-600 hover:bg-teal-700 text-white">Download ZIP</Button>
+                      <Button 
+                        onClick={handleDownload}
+                        className="bg-teal-600 hover:bg-teal-700 text-white"
+                      >
+                        Download ZIP
+                      </Button>
                       <Button
                         variant="outline"
                         className="border-gray-600 text-gray-300 hover:bg-gray-800 bg-transparent"

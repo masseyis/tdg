@@ -4,6 +4,7 @@ import logging
 from typing import List, Dict, Any
 from app.ai.base import AIProvider, TestCase
 from app.ai.prompts import get_test_generation_prompt, order_test_cases
+from app.utils.json_repair import safe_json_parse, extract_json_from_content
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -25,18 +26,16 @@ class AnthropicProvider(AIProvider):
         """Check if Anthropic API key is configured"""
         return bool(settings.anthropic_api_key)
 
-    def _get_model_config(self, speed: str, endpoint: Any = None) -> tuple[str, float, int]:
-        """Get model configuration based on speed preference and endpoint type"""
+    def _get_model_config(self, speed: str) -> tuple[str, float, int]:
+        """Get model configuration based on speed preference"""
         if speed == "fast":
-            # Allocate more tokens for POST operations to ensure rich data generation
-            tokens = 2000 if (endpoint and endpoint.method == "POST") else 1000
-            return "claude-3-haiku-20240307", 0.5, tokens  # Slightly higher temperature for more variety
+            return "claude-3-haiku-20240307", 0.5, 1500  # Fastest model
         elif speed == "balanced":
-            return settings.anthropic_model, settings.ai_temperature, settings.ai_max_tokens
+            return "claude-3-sonnet-20240229", 0.3, 2000  # Balanced model
         elif speed == "quality":
-            return "claude-3-opus-20240229", 0.7, 3000  # Best quality model, higher temperature, more tokens
+            return "claude-3-opus-20240229", 0.7, 3000  # Best quality model
         else:
-            return settings.anthropic_model, settings.ai_temperature, settings.ai_max_tokens
+            return "claude-3-sonnet-20240229", 0.3, 2000  # Default to balanced
 
     async def generate_cases(
         self,
@@ -52,16 +51,15 @@ class AnthropicProvider(AIProvider):
         try:
             prompt = get_test_generation_prompt(endpoint, options)
 
-            # Get model configuration based on speed preference and endpoint type
+            # Get model configuration based on speed preference
             speed = options.get("speed", "fast")
-            model, temperature, max_tokens = self._get_model_config(speed, endpoint)
+            model, temperature, max_tokens = self._get_model_config(speed)
             
             message = self.client.messages.create(
                 model=model,
                 max_tokens=max_tokens,
                 temperature=temperature,
-                system="You are a test data generation expert. "
-                       "Generate test cases as valid JSON.",
+                system="You are a test data generation expert. Generate test cases as valid JSON with rich, meaningful data.",
                 messages=[
                     {"role": "user", "content": prompt}
                 ]
@@ -69,12 +67,19 @@ class AnthropicProvider(AIProvider):
 
             # Extract JSON from response
             content = message.content[0].text
-            json_start = content.find("{")
-            json_end = content.rfind("}") + 1
-            if json_start >= 0 and json_end > json_start:
-                content = content[json_start:json_end]
-
-            data = json.loads(content)
+            
+            # Use JSON repair utility for robust parsing
+            data = safe_json_parse(content)
+            if not data:
+                logger.warning("Anthropic returned invalid JSON, attempting extraction...")
+                # Try to extract and repair JSON from the response
+                data = extract_json_from_content(content)
+                
+            if not data:
+                logger.error("Failed to extract valid JSON from Anthropic response")
+                # Fallback to null provider
+                from app.ai.null_provider import NullProvider
+                return await NullProvider().generate_cases(endpoint, options)
 
             # Parse response into TestCase objects
             cases = []

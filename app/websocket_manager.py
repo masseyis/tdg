@@ -3,8 +3,8 @@ import asyncio
 import json
 import logging
 import uuid
-from typing import Dict, Set, Optional
-from dataclasses import dataclass
+from typing import Dict, Set, Optional, List
+from dataclasses import dataclass, asdict
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -23,19 +23,27 @@ class WebSocketManager:
     """Manages WebSocket connections and progress updates"""
     
     def __init__(self):
-        self.active_connections: Set[str] = set()
+        self.active_connections: Dict[str, List[any]] = {}  # task_id -> list of websockets
         self.task_progress: Dict[str, ProgressUpdate] = {}
-        self.connection_tasks: Dict[str, str] = {}  # connection_id -> task_id
     
     async def connect(self, websocket, task_id: str):
         """Connect a WebSocket to a specific task"""
-        connection_id = str(uuid.uuid4())
-        self.active_connections.add(connection_id)
-        self.connection_tasks[connection_id] = task_id
+        # Accept the WebSocket connection
+        await websocket.accept()
+        
+        # Add to active connections
+        if task_id not in self.active_connections:
+            self.active_connections[task_id] = []
+        self.active_connections[task_id].append(websocket)
         
         # Send initial progress if available
         if task_id in self.task_progress:
-            await websocket.send_text(json.dumps(self.task_progress[task_id].__dict__))
+            try:
+                await websocket.send_text(json.dumps(asdict(self.task_progress[task_id])))
+            except Exception as e:
+                logger.error(f"Failed to send initial progress: {e}")
+        
+        logger.info(f"WebSocket connected for task {task_id}. Total connections: {len(self.active_connections[task_id])}")
         
         try:
             # Keep connection alive and handle disconnection
@@ -45,13 +53,18 @@ class WebSocketManager:
         except Exception as e:
             logger.error(f"WebSocket error: {e}")
         finally:
-            self.active_connections.discard(connection_id)
-            if connection_id in self.connection_tasks:
-                del self.connection_tasks[connection_id]
+            # Remove from active connections
+            if task_id in self.active_connections:
+                if websocket in self.active_connections[task_id]:
+                    self.active_connections[task_id].remove(websocket)
+                # Clean up empty task connections
+                if not self.active_connections[task_id]:
+                    del self.active_connections[task_id]
+            logger.info(f"WebSocket disconnected for task {task_id}")
     
-    def update_progress(self, task_id: str, stage: str, progress: int, message: str, 
-                       endpoint_count: Optional[int] = None, current_endpoint: Optional[int] = None):
-        """Update progress for a specific task"""
+    async def update_progress(self, task_id: str, stage: str, progress: int, message: str, 
+                             endpoint_count: Optional[int] = None, current_endpoint: Optional[int] = None):
+        """Update progress for a specific task and broadcast to all connected clients"""
         update = ProgressUpdate(
             stage=stage,
             progress=progress,
@@ -63,6 +76,26 @@ class WebSocketManager:
         
         self.task_progress[task_id] = update
         logger.info(f"Progress update for {task_id}: {stage} - {progress}% - {message}")
+        
+        # Broadcast to all connected clients for this task
+        if task_id in self.active_connections:
+            disconnected_websockets = []
+            
+            for websocket in self.active_connections[task_id]:
+                try:
+                    await websocket.send_text(json.dumps(asdict(update)))
+                except Exception as e:
+                    logger.error(f"Failed to send progress update to WebSocket: {e}")
+                    disconnected_websockets.append(websocket)
+            
+            # Remove disconnected websockets
+            for websocket in disconnected_websockets:
+                if task_id in self.active_connections and websocket in self.active_connections[task_id]:
+                    self.active_connections[task_id].remove(websocket)
+            
+            # Clean up empty task connections
+            if task_id in self.active_connections and not self.active_connections[task_id]:
+                del self.active_connections[task_id]
     
     def get_progress(self, task_id: str) -> Optional[ProgressUpdate]:
         """Get current progress for a task"""
@@ -73,14 +106,14 @@ class WebSocketManager:
         if task_id in self.task_progress:
             del self.task_progress[task_id]
         
-        # Remove any connections associated with this task
-        connections_to_remove = [
-            conn_id for conn_id, task in self.connection_tasks.items() 
-            if task == task_id
-        ]
-        for conn_id in connections_to_remove:
-            if conn_id in self.connection_tasks:
-                del self.connection_tasks[conn_id]
+        # Close all WebSocket connections for this task
+        if task_id in self.active_connections:
+            for websocket in self.active_connections[task_id]:
+                try:
+                    asyncio.create_task(websocket.close())
+                except Exception as e:
+                    logger.error(f"Error closing WebSocket: {e}")
+            del self.active_connections[task_id]
 
 # Global WebSocket manager instance
 websocket_manager = WebSocketManager()

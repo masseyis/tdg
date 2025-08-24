@@ -1,8 +1,10 @@
+"""OpenAI provider for test case generation"""
 import json
 import logging
 from typing import List, Dict, Any
 from app.ai.base import AIProvider, TestCase
 from app.ai.prompts import get_test_generation_prompt, order_test_cases
+from app.utils.json_repair import safe_json_parse, extract_json_from_content
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -69,7 +71,19 @@ class OpenAIProvider(AIProvider):
             )
 
             content = response.choices[0].message.content
-            data = json.loads(content)
+            
+            # Use JSON repair utility for robust parsing
+            data = safe_json_parse(content)
+            if not data:
+                logger.warning("OpenAI returned invalid JSON, attempting extraction...")
+                # Try to extract and repair JSON from the response
+                data = extract_json_from_content(content)
+                
+            if not data:
+                logger.error("Failed to extract valid JSON from OpenAI response")
+                # Fallback to null provider
+                from app.ai.null_provider import NullProvider
+                return await NullProvider().generate_cases(endpoint, options)
 
             # Parse response into TestCase objects
             cases = []

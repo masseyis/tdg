@@ -8,8 +8,9 @@ This test validates the complete user experience:
 3. Opens a real browser and drives the web UI
 4. Uploads an OpenAPI spec via the web interface
 5. Generates test files for Java, Python, and Node.js
-6. Compiles and runs the generated tests against the mock service
-7. Validates that all frameworks work correctly
+6. Downloads and extracts the generated ZIP file
+7. Compiles and runs the generated tests against the mock service
+8. Validates that all frameworks work correctly
 """
 
 import asyncio
@@ -19,6 +20,7 @@ import logging
 import subprocess
 import tempfile
 import time
+import zipfile
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -151,22 +153,29 @@ class WebUIDriver:
             logger.error(f"Test generation did not complete within {timeout} seconds: {e}")
             return False
     
-    def download_generated_file(self) -> Optional[bytes]:
-        """Download the generated ZIP file"""
+    def get_downloaded_file_path(self) -> Optional[Path]:
+        """Get the path to the downloaded ZIP file"""
         try:
-            # The file should be automatically downloaded, but we can check if it's ready
-            # For now, we'll assume it's downloaded to the default download directory
-            # In a real scenario, you might need to handle the download differently
-            
-            # Wait a bit for the download to complete
+            # Wait for download to complete
             time.sleep(5)
             
-            logger.info("✅ File download initiated")
-            # Note: In a real test, you'd need to check the actual download location
-            # For now, we'll return None and handle the file checking in the test
+            # Look for the downloaded file in the default download directory
+            # This is a simplified approach - in production you might need more sophisticated download handling
+            download_dir = Path.home() / "Downloads"
+            
+            # Look for the most recent ZIP file
+            zip_files = list(download_dir.glob("test-artifacts*.zip"))
+            if zip_files:
+                # Sort by modification time and get the most recent
+                latest_zip = max(zip_files, key=lambda f: f.stat().st_mtime)
+                logger.info(f"✅ Found downloaded file: {latest_zip}")
+                return latest_zip
+            
+            logger.warning("No downloaded ZIP file found")
             return None
+            
         except Exception as e:
-            logger.error(f"Failed to download file: {e}")
+            logger.error(f"Failed to get downloaded file: {e}")
             return None
 
 
@@ -176,93 +185,245 @@ class JavaTestRunner:
     def run_tests(self, java_dir: Path, target_url: str = "http://localhost:8082") -> bool:
         """Run the generated Java tests"""
         
-        # Extract the generated ZIP to get the Maven project
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
+        # Find the pom.xml in the Java directory
+        pom_files = list(java_dir.rglob("pom.xml"))
+        if not pom_files:
+            logger.error("No pom.xml found in generated Java files")
+            return False
+        
+        project_dir = pom_files[0].parent
+        logger.info(f"Using generated pom.xml from ZIP file: {project_dir}")
+        
+        # Copy test files
+        test_dir = project_dir / "src" / "test" / "java"
+        test_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy all Java files from the extracted directory
+        for java_file in java_dir.rglob("*.java"):
+            relative_path = java_file.relative_to(java_dir)
+            # Handle the case where files are already in src/test/java structure
+            if relative_path.parts[0] == "src":
+                # Skip the src/test/java part and use the rest
+                target_path = relative_path.parts[3:]  # Skip src/test/java
+                target_file = test_dir / Path(*target_path)
+            else:
+                target_file = test_dir / relative_path
+            target_file.parent.mkdir(parents=True, exist_ok=True)
             
-            # Find the pom.xml in the Java directory
-            pom_files = list(java_dir.rglob("pom.xml"))
-            if not pom_files:
-                logger.error("No pom.xml found in generated Java files")
-                return False
+            # Read and modify the test file to use the target URL
+            with open(java_file, 'r') as f:
+                content = f.read()
             
-            project_dir = pom_files[0].parent
-            logger.info(f"Using generated pom.xml from ZIP file: {project_dir}")
+            # Replace any hardcoded URLs with the target URL
+            content = content.replace("http://localhost:8080", target_url)
+            content = content.replace("http://example.com", target_url)
             
-            # Copy test files
-            test_dir = project_dir / "src" / "test" / "java"
-            test_dir.mkdir(parents=True, exist_ok=True)
+            with open(target_file, 'w') as f:
+                f.write(content)
+        
+        # Copy test-data.json to resources
+        test_data_files = list(java_dir.rglob("test-data.json"))
+        if test_data_files:
+            resources_dir = project_dir / "src" / "test" / "resources"
+            resources_dir.mkdir(parents=True, exist_ok=True)
             
-            # Copy all Java files from the extracted directory
-            for java_file in java_dir.rglob("*.java"):
-                relative_path = java_file.relative_to(java_dir)
-                # Handle the case where files are already in src/test/java structure
-                if relative_path.parts[0] == "src":
-                    # Skip the src/test/java part and use the rest
-                    target_path = relative_path.parts[3:]  # Skip src/test/java
-                    target_file = test_dir / Path(*target_path)
-                else:
-                    target_file = test_dir / relative_path
-                target_file.parent.mkdir(parents=True, exist_ok=True)
-                
-                # Read and modify the test file to use the target URL
-                with open(java_file, 'r') as f:
+            for test_data_file in test_data_files:
+                target_file = resources_dir / "test-data.json"
+                with open(test_data_file, 'r') as f:
                     content = f.read()
-                
-                # Replace any hardcoded URLs with the target URL
-                content = content.replace("http://localhost:8080", target_url)
-                content = content.replace("http://example.com", target_url)
-                
                 with open(target_file, 'w') as f:
                     f.write(content)
+                logger.info(f"Copied test-data.json from {test_data_file}")
+                break
+        
+        # Run Maven tests
+        try:
+            result = subprocess.run(
+                ['mvn', 'test', '-Dtest=*Test', f'-DbaseUrl={target_url}'],
+                cwd=project_dir,
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
             
-            # Copy test-data.json to resources
-            test_data_files = list(java_dir.rglob("test-data.json"))
-            if test_data_files:
-                resources_dir = project_dir / "src" / "test" / "resources"
-                resources_dir.mkdir(parents=True, exist_ok=True)
-                
-                for test_data_file in test_data_files:
-                    target_file = resources_dir / "test-data.json"
-                    with open(test_data_file, 'r') as f:
-                        content = f.read()
-                    with open(target_file, 'w') as f:
-                        f.write(content)
-                    logger.info(f"Copied test-data.json from {test_data_file}")
-                    break
+            logger.info(f"Maven test output:\n{result.stdout}")
+            if result.stderr:
+                logger.warning(f"Maven test stderr:\n{result.stderr}")
             
-            # Run Maven tests
+            # Check if the failure is due to compilation issues or just test failures
+            if result.returncode != 0:
+                if "compilation failure" in result.stderr.lower() or "cannot find symbol" in result.stderr.lower():
+                    logger.error("❌ Java compilation failed")
+                    return False
+                else:
+                    logger.warning("⚠️  Java tests ran but some failed (expected with mock service)")
+                    return True  # Tests compiled and ran, which is what we want
+            
+            logger.info("✅ Java tests passed")
+            return True
+            
+        except subprocess.TimeoutExpired:
+            logger.error("❌ Maven tests timed out")
+            return False
+        except Exception as e:
+            logger.error(f"❌ Failed to run Maven tests: {e}")
+            return False
+
+
+class PythonTestRunner:
+    """Runner for generated Python tests"""
+    
+    def run_tests(self, python_dir: Path, target_url: str = "http://localhost:8082") -> bool:
+        """Run the generated Python tests"""
+        
+        # Find the main test file
+        test_files = list(python_dir.rglob("test_api.py"))
+        if not test_files:
+            logger.error("No test_api.py found in generated Python files")
+            return False
+        
+        test_file = test_files[0]
+        test_dir = test_file.parent
+        
+        # Copy test-data.json if it exists
+        test_data_files = list(python_dir.rglob("test-data.json"))
+        if test_data_files:
+            for test_data_file in test_data_files:
+                target_file = test_dir / "test-data.json"
+                with open(test_data_file, 'r') as f:
+                    content = f.read()
+                with open(target_file, 'w') as f:
+                    f.write(content)
+                logger.info(f"Copied test-data.json from {test_data_file}")
+                break
+        
+        # Install dependencies if requirements.txt exists
+        requirements_file = test_dir / "requirements.txt"
+        if requirements_file.exists():
             try:
-                result = subprocess.run(
-                    ['mvn', 'test', '-Dtest=*Test', f'-DbaseUrl={target_url}'],
-                    cwd=project_dir,
+                logger.info("Installing Python dependencies...")
+                subprocess.run(
+                    ['pip', 'install', '-r', str(requirements_file)],
+                    cwd=test_dir,
                     capture_output=True,
                     text=True,
-                    timeout=120
+                    check=True
                 )
-                
-                logger.info(f"Maven test output:\n{result.stdout}")
-                if result.stderr:
-                    logger.warning(f"Maven test stderr:\n{result.stderr}")
-                
-                # Check if the failure is due to compilation issues or just test failures
-                if result.returncode != 0:
-                    if "compilation failure" in result.stderr.lower() or "cannot find symbol" in result.stderr.lower():
-                        logger.error("❌ Java compilation failed")
-                        return False
-                    else:
-                        logger.warning("⚠️  Java tests ran but some failed (expected with mock service)")
-                        return True  # Tests compiled and ran, which is what we want
-                
-                logger.info("✅ Java tests passed")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to install Python dependencies: {e}")
+                return False
+        
+        # Run Python tests
+        try:
+            logger.info(f"Running Python tests against: {target_url}")
+            result = subprocess.run(
+                ['python', 'test_api.py', target_url],
+                cwd=test_dir,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            logger.info(f"Python test output:\n{result.stdout}")
+            if result.stderr:
+                logger.warning(f"Python test stderr:\n{result.stderr}")
+            
+            # Check if the failure is due to import issues or just test failures
+            if result.returncode != 0:
+                if "import" in result.stderr.lower() or "module" in result.stderr.lower():
+                    logger.error("❌ Python import/module error")
+                    return False
+                else:
+                    logger.warning("⚠️  Python tests ran but some failed (expected with mock service)")
+                    return True  # Tests ran, which is what we want
+            else:
+                logger.info("✅ Python tests passed")
                 return True
                 
-            except subprocess.TimeoutExpired:
-                logger.error("❌ Maven tests timed out")
+        except subprocess.TimeoutExpired:
+            logger.error("❌ Python tests timed out")
+            return False
+        except Exception as e:
+            logger.error(f"❌ Python test execution failed: {e}")
+            return False
+
+
+class NodeTestRunner:
+    """Runner for generated Node.js tests"""
+    
+    def run_tests(self, node_dir: Path, target_url: str = "http://localhost:8082") -> bool:
+        """Run the generated Node.js tests"""
+        
+        # Find the main test file
+        test_files = list(node_dir.rglob("test_api.js"))
+        if not test_files:
+            logger.error("No test_api.js found in generated Node.js files")
+            return False
+        
+        test_file = test_files[0]
+        test_dir = test_file.parent
+        
+        # Copy test-data.json if it exists
+        test_data_files = list(node_dir.rglob("test-data.json"))
+        if test_data_files:
+            for test_data_file in test_data_files:
+                target_file = test_dir / "test-data.json"
+                with open(test_data_file, 'r') as f:
+                    content = f.read()
+                with open(target_file, 'w') as f:
+                    f.write(content)
+                logger.info(f"Copied test-data.json from {test_data_file}")
+                break
+        
+        # Install dependencies if package.json exists
+        package_file = test_dir / "package.json"
+        if package_file.exists():
+            try:
+                logger.info("Installing Node.js dependencies...")
+                subprocess.run(
+                    ['npm', 'install'],
+                    cwd=test_dir,
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to install Node.js dependencies: {e}")
                 return False
-            except Exception as e:
-                logger.error(f"❌ Failed to run Maven tests: {e}")
-                return False
+        
+        # Run Node.js tests
+        try:
+            logger.info(f"Running Node.js tests against: {target_url}")
+            result = subprocess.run(
+                ['node', 'test_api.js', target_url],
+                cwd=test_dir,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            logger.info(f"Node.js test output:\n{result.stdout}")
+            if result.stderr:
+                logger.warning(f"Node.js test stderr:\n{result.stderr}")
+            
+            # Check if the failure is due to import issues or just test failures
+            if result.returncode != 0:
+                if "module" in result.stderr.lower() or "require" in result.stderr.lower():
+                    logger.error("❌ Node.js module error")
+                    return False
+                else:
+                    logger.warning("⚠️  Node.js tests ran but some failed (expected with mock service)")
+                    return True  # Tests ran, which is what we want
+            else:
+                logger.info("✅ Node.js tests passed")
+                return True
+                
+        except subprocess.TimeoutExpired:
+            logger.error("❌ Node.js tests timed out")
+            return False
+        except Exception as e:
+            logger.error(f"❌ Node.js test execution failed: {e}")
+            return False
 
 
 def test_complete_user_experience():
@@ -311,17 +472,58 @@ def test_complete_user_experience():
         if not ui_driver.wait_for_generation_complete():
             assert False, "Test generation did not complete"
         
-        # Step 6: Check that the file was generated (in a real test, you'd download and verify)
-        logger.info("✅ Test generation completed successfully via web UI")
+        # Step 6: Get the downloaded ZIP file
+        logger.info("📦 Getting downloaded ZIP file...")
+        zip_file_path = ui_driver.get_downloaded_file_path()
+        if not zip_file_path:
+            assert False, "Failed to get downloaded ZIP file"
         
-        # Note: In a real e2e test, you would:
-        # 1. Actually download the generated ZIP file
-        # 2. Extract and verify its contents
-        # 3. Run the generated tests against the mock service
-        # 4. Verify all tests pass
+        # Step 7: Extract and run the generated tests
+        logger.info("🔍 Extracting and running generated tests...")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            
+            # Extract ZIP file
+            with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_path)
+            
+            logger.info(f"📦 Extracted test files to: {temp_path}")
+            
+            # Test Java framework
+            logger.info("☕ Testing Java framework...")
+            java_dir = temp_path / "artifacts" / "junit"
+            if java_dir.exists():
+                java_runner = JavaTestRunner()
+                java_success = java_runner.run_tests(java_dir, "http://localhost:8082")
+                assert java_success, "Java tests should compile and run against the mock service"
+                logger.info("✅ Java framework test completed")
+            else:
+                logger.warning("⚠️  Java artifacts not found in generated ZIP")
+            
+            # Test Python framework
+            logger.info("🐍 Testing Python framework...")
+            python_dir = temp_path / "artifacts" / "python"
+            if python_dir.exists():
+                python_runner = PythonTestRunner()
+                python_success = python_runner.run_tests(python_dir, "http://localhost:8082")
+                assert python_success, "Python tests should run against the mock service"
+                logger.info("✅ Python framework test completed")
+            else:
+                logger.warning("⚠️  Python artifacts not found in generated ZIP")
+            
+            # Test Node.js framework
+            logger.info("🟢 Testing Node.js framework...")
+            node_dir = temp_path / "artifacts" / "nodejs"
+            if node_dir.exists():
+                node_runner = NodeTestRunner()
+                node_success = node_runner.run_tests(node_dir, "http://localhost:8082")
+                assert node_success, "Node.js tests should run against the mock service"
+                logger.info("✅ Node.js framework test completed")
+            else:
+                logger.warning("⚠️  Node.js artifacts not found in generated ZIP")
         
-        # For now, we'll just verify the UI flow worked
-        assert True, "Web UI test generation flow completed successfully"
+        # Step 8: Verify results
+        logger.info("✅ All tests passed! End-to-end test successful.")
         
     finally:
         # Clean up

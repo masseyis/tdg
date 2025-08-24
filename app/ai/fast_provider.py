@@ -4,6 +4,7 @@ import logging
 from typing import List, Dict, Any
 from app.ai.base import AIProvider, TestCase
 from app.ai.prompts import get_test_generation_prompt, order_test_cases
+from app.utils.json_repair import safe_json_parse, extract_json_from_content
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -84,27 +85,18 @@ class FastAIProvider(AIProvider):
 
         content = response.choices[0].message.content
         
-        # Better JSON parsing with error handling
-        try:
-            data = json.loads(content)
-        except json.JSONDecodeError as e:
-            logger.warning(f"OpenAI returned invalid JSON: {e}")
-            logger.warning(f"Raw content: {content[:500]}...")
-            # Try to extract valid JSON from the response
-            try:
-                # Look for JSON-like content between braces
-                json_start = content.find("{")
-                json_end = content.rfind("}") + 1
-                if json_start >= 0 and json_end > json_start:
-                    json_content = content[json_start:json_end]
-                    data = json.loads(json_content)
-                else:
-                    raise ValueError("No valid JSON found in response")
-            except Exception as fallback_error:
-                logger.error(f"Failed to extract valid JSON: {fallback_error}")
-                # Fallback to null provider
-                from app.ai.null_provider import NullProvider
-                return await NullProvider().generate_cases(endpoint, options)
+        # Use JSON repair utility for robust parsing
+        data = safe_json_parse(content)
+        if not data:
+            logger.warning("OpenAI returned invalid JSON, attempting extraction...")
+            # Try to extract and repair JSON from the response
+            data = extract_json_from_content(content)
+            
+        if not data:
+            logger.error("Failed to extract valid JSON from OpenAI response")
+            # Fallback to null provider
+            from app.ai.null_provider import NullProvider
+            return await NullProvider().generate_cases(endpoint, options)
         
         return self._parse_cases(data, endpoint)
 
@@ -128,24 +120,15 @@ class FastAIProvider(AIProvider):
         # Extract JSON from response
         content = message.content[0].text
         
-        # Better JSON parsing with error handling
-        try:
-            # Look for JSON-like content between braces
-            json_start = content.find("{")
-            json_end = content.rfind("}") + 1
-            if json_start >= 0 and json_end > json_start:
-                json_content = content[json_start:json_end]
-                data = json.loads(json_content)
-            else:
-                raise ValueError("No valid JSON found in response")
-        except json.JSONDecodeError as e:
-            logger.warning(f"Anthropic returned invalid JSON: {e}")
-            logger.warning(f"Raw content: {content[:500]}...")
-            # Fallback to null provider
-            from app.ai.null_provider import NullProvider
-            return await NullProvider().generate_cases(endpoint, options)
-        except Exception as e:
-            logger.error(f"Failed to extract valid JSON from Anthropic: {e}")
+        # Use JSON repair utility for robust parsing
+        data = safe_json_parse(content)
+        if not data:
+            logger.warning("Anthropic returned invalid JSON, attempting extraction...")
+            # Try to extract and repair JSON from the response
+            data = extract_json_from_content(content)
+            
+        if not data:
+            logger.error("Failed to extract valid JSON from Anthropic response")
             # Fallback to null provider
             from app.ai.null_provider import NullProvider
             return await NullProvider().generate_cases(endpoint, options)

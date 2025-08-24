@@ -3,8 +3,10 @@ import asyncio
 import logging
 from typing import Dict, Any, List
 from app.ai.base import get_provider, get_provider_for_speed
+from app.ai.null_provider import NullProvider
 from app.utils.validation import validate_against_schema, fix_data_for_schema
 from app.utils.flows import create_basic_flows
+from app.utils.faker_utils import set_seed
 from app.generation.renderers import (
     junit_restassured,
     postman,
@@ -21,6 +23,51 @@ from app.config import settings
 ai_semaphore = asyncio.Semaphore(settings.ai_concurrency_limit)
 
 logger = logging.getLogger(__name__)
+
+
+def create_test_data_json(cases):
+    """Create test data JSON from generated cases"""
+    test_data = []
+    for case in cases:
+        test_data.append({
+            "endpoint": case.endpoint,
+            "method": case.method,
+            "body": case.body,
+            "query_params": case.query_params,
+            "path_params": case.path_params,
+            "headers": case.headers
+        })
+    return test_data
+
+
+def generate_junit_artifacts(cases, test_data):
+    """Generate JUnit artifacts"""
+    return junit_restassured.render(cases, test_data)
+
+
+def generate_python_artifacts(cases, test_data):
+    """Generate Python artifacts"""
+    return python_renderer.render(cases, test_data)
+
+
+def generate_nodejs_artifacts(cases, test_data):
+    """Generate Node.js artifacts"""
+    return nodejs_renderer.render(cases, test_data)
+
+
+def generate_postman_artifacts(cases, test_data):
+    """Generate Postman artifacts"""
+    return postman.render(cases, test_data)
+
+
+def generate_csv_artifacts(cases):
+    """Generate CSV artifacts"""
+    return csv_renderer.render(cases)
+
+
+def generate_sql_artifacts(cases):
+    """Generate SQL artifacts"""
+    return sql_renderer.render(cases)
 
 
 async def generate_test_cases(
@@ -98,43 +145,24 @@ async def generate_test_cases(
     # Create multi-step flows
     flows = create_basic_flows(normalized_api.endpoints)
 
-    # Generate requested outputs
+    # Generate artifacts for each output format
     if "junit" in outputs:
-        artifacts["junit"] = junit_restassured.render(
-            all_cases,
-            normalized_api,
-            flows
-        )
+        artifacts["junit"] = junit_restassured.render(all_cases, flows)
 
     if "postman" in outputs:
-        artifacts["postman"] = postman.render(
-            all_cases,
-            normalized_api,
-            flows
-        )
+        artifacts["postman"] = postman.render(all_cases, flows)
 
     if "wiremock" in outputs:
-        artifacts["wiremock"] = wiremock.render(
-            all_cases,
-            normalized_api
-        )
-
-    if "json" in outputs:
-        artifacts["json"] = json_renderer.render(all_cases)
+        artifacts["wiremock"] = wiremock.render(all_cases, flows)
 
     if "python" in outputs:
-        artifacts["python"] = python_renderer.render(
-            all_cases,
-            normalized_api,
-            flows
-        )
+        artifacts["python"] = python_renderer.render(all_cases, flows)
 
     if "nodejs" in outputs:
-        artifacts["nodejs"] = nodejs_renderer.render(
-            all_cases,
-            normalized_api,
-            flows
-        )
+        artifacts["nodejs"] = nodejs_renderer.render(all_cases, flows)
+
+    if "json" in outputs:
+        artifacts["json"] = flows
 
     if "csv" in outputs:
         artifacts["csv"] = csv_renderer.render(all_cases)
@@ -163,7 +191,7 @@ async def generate_test_cases_with_progress(
         outputs = ["junit", "python", "nodejs", "postman"]
     
     if seed is not None:
-        set_faker_seed(seed)
+        set_seed(seed)
     
     # Get AI provider based on speed preference
     provider = get_provider_for_speed(ai_speed)
@@ -176,13 +204,13 @@ async def generate_test_cases_with_progress(
     
     # Process endpoints with progress updates
     total_endpoints = len(normalized_spec.endpoints)
-    update_progress(task_id, "generating", 30, f"Processing {total_endpoints} endpoints...")
+    await update_progress(task_id, "generating", 30, f"Processing {total_endpoints} endpoints...")
     
     endpoint_results = []
     for i, endpoint in enumerate(normalized_spec.endpoints):
         # Update progress for each endpoint
         progress = 30 + int((i / total_endpoints) * 60)  # 30% to 90%
-        update_progress(
+        await update_progress(
             task_id, 
             "generating", 
             progress, 
@@ -232,6 +260,6 @@ async def generate_test_cases_with_progress(
         elif output_format == "json":
             artifacts["json"] = test_data
     
-    update_progress(task_id, "generating", 90, "Test cases generated, creating artifacts...")
+    await update_progress(task_id, "generating", 90, "Test cases generated, creating artifacts...")
     
     return artifacts
