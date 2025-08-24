@@ -61,27 +61,49 @@ def normalize_openapi(spec: Dict[str, Any]) -> NormalizedAPI:
     Returns:
         Normalized API model
     """
+    # Add debug logging
+    logger.debug(f"Normalizing OpenAPI spec: {type(spec)}")
+    logger.debug(f"Spec keys: {list(spec.keys()) if isinstance(spec, dict) else 'Not a dict'}")
+    
+    # Ensure spec is a dict
+    if not isinstance(spec, dict):
+        logger.error(f"Expected dict for OpenAPI spec, got {type(spec)}: {spec}")
+        raise ValueError(f"OpenAPI spec must be a dict, got {type(spec)}")
+    
     # Extract basic info
     info = spec.get("info", {})
+    logger.debug(f"Info section: {info}")
+    
+    # Ensure info is a dict
+    if not isinstance(info, dict):
+        logger.error(f"Expected dict for info section, got {type(info)}: {info}")
+        raise ValueError(f"Info section must be a dict, got {type(info)}")
+    
     normalized = NormalizedAPI(
         title=info.get("title", "API"),
         version=info.get("version", "1.0.0"),
         description=info.get("description"),
-        servers=[s.get("url") for s in spec.get("servers", [])],
+        servers=[s.get("url") for s in spec.get("servers", []) if isinstance(s, dict)],
         components=spec.get("components", {})
     )
 
     # Parse paths
     paths = spec.get("paths", {})
+    if not isinstance(paths, dict):
+        logger.error(f"Expected dict for paths, got {type(paths)}: {paths}")
+        raise ValueError(f"Paths section must be a dict, got {type(paths)}")
+    
     for path, path_item in paths.items():
         # Handle path-level parameters
-        path_params = path_item.get("parameters", [])
+        path_params = path_item.get("parameters", []) if isinstance(path_item, dict) else []
 
         for method in ["get", "post", "put", "patch", "delete", "head", "options"]:
-            if method not in path_item:
+            if method not in path_item or not isinstance(path_item, dict):
                 continue
 
             operation = path_item[method]
+            if not isinstance(operation, dict):
+                continue
 
             # Create endpoint
             endpoint = Endpoint(
@@ -96,6 +118,9 @@ def normalize_openapi(spec: Dict[str, Any]) -> NormalizedAPI:
             # Parse parameters
             all_params = path_params + operation.get("parameters", [])
             for param in all_params:
+                if not isinstance(param, dict):
+                    continue
+                    
                 # Handle $ref
                 if "$ref" in param:
                     param = resolve_ref(spec, param["$ref"])

@@ -354,8 +354,9 @@
             const specUrl = formData.get('specUrl');
             
             if (file) {
-                // Handle file upload
-                return await file.text();
+                // Handle file upload - properly await the file text
+                const fileContent = await file.text();
+                return fileContent;
             } else if (specUrl) {
                 // Handle URL
                 const response = await fetch(specUrl);
