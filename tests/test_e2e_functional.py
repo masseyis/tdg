@@ -369,9 +369,12 @@ class WebUIDriver:
                 (By.XPATH, "//*[contains(text(), 'completed')]"),
                 (By.XPATH, "//*[contains(text(), 'success')]"),
                 (By.XPATH, "//*[contains(text(), 'ready')]"),
+                (By.XPATH, "//*[contains(text(), 'ZIP file downloaded')]"),
                 # Look for download links
                 (By.XPATH, "//a[contains(@href, '.zip')]"),
                 (By.XPATH, "//a[contains(text(), 'download')]"),
+                # Look for results section visibility
+                (By.ID, "results"),
             ]
             
             start_time = time.time()

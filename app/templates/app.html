@@ -279,10 +279,51 @@
             // Show loading spinner
             showLoadingSpinner();
             
-            // Allow the form to submit naturally to /generate-ui
-            // The browser will handle the ZIP file download automatically
-            // This is simpler and more reliable than manual handling
-            return true;
+            // Submit form manually to handle the ZIP file response properly
+            event.preventDefault();
+            
+            const formData = new FormData(form);
+            
+            fetch('/generate-ui', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Handle ZIP file download
+                    return response.blob();
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            })
+            .then(blob => {
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'test-artifacts.zip';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // Hide loading spinner and show success
+                hideLoadingSpinner();
+                showSuccessMessage('Test generation completed! ZIP file downloaded.');
+                
+                // Show results section
+                const resultsSection = document.getElementById('results');
+                if (resultsSection) {
+                    resultsSection.classList.remove('hidden');
+                }
+            })
+            .catch(error => {
+                console.error('Generation failed:', error);
+                hideLoadingSpinner();
+                showErrorMessage('Test generation failed: ' + error.message);
+            });
+            
+            return false; // Prevent default form submission
         }
         
         // WebSocket-based progress tracking
