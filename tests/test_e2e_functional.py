@@ -19,6 +19,7 @@ import subprocess
 import tempfile
 import time
 import zipfile
+import signal
 from pathlib import Path
 from typing import Dict, Any, Optional
 import os
@@ -38,6 +39,16 @@ from tests.mock_service import MockService
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class TimeoutError(Exception):
+    """Custom timeout error for e2e tests"""
+    pass
+
+
+def timeout_handler(signum, frame):
+    """Handle timeout signal"""
+    raise TimeoutError("E2E test timed out - this is a critical test that must not hang")
 
 
 class WebService:
@@ -164,6 +175,11 @@ class WebUIDriver:
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
             chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--disable-extensions")
+            chrome_options.add_argument("--disable-plugins")
+            chrome_options.add_argument("--disable-images")
+            chrome_options.add_argument("--disable-javascript")  # Disable JS for faster loading
+            chrome_options.add_argument("--timeout=30000")  # 30 second timeout
             
             # Use webdriver-manager to automatically download and manage ChromeDriver
             service = Service(ChromeDriverManager().install())
@@ -590,123 +606,147 @@ class NodeTestRunner:
             return False
 
 
+@pytest.mark.timeout(300)  # 5 minute timeout
 def test_complete_user_experience():
     """Test the complete user experience end-to-end using real browser automation"""
     
-    # Step 1: Start the main web service
-    logger.info("🌐 Starting main web service...")
-    web_service = WebService(port=8080)
-    if not web_service.start():
-        assert False, "Failed to start main web service"
-    
-    # Step 2: Start the mock API service
-    logger.info("🌐 Starting mock API service...")
-    mock_service = MockService(Path("tests/samples/petstore-minimal.yaml"), port=8082)
-    mock_service.start()
-    
-    # Step 3: Start the web UI driver
-    logger.info("🌐 Starting web UI driver...")
-    ui_driver = WebUIDriver("http://localhost:8080")
+    # Set a timeout for the entire test to prevent hanging
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(300)  # 5 minute timeout for the entire test
     
     try:
-        # Wait for services to be ready
-        time.sleep(3)
+        # Step 1: Start the main web service
+        logger.info("🌐 Starting main web service...")
+        web_service = WebService(port=8080)
+        if not web_service.start():
+            assert False, "Failed to start main web service"
         
-        # Verify main service is responding
-        with httpx.Client() as http_client:
-            response = http_client.get("http://localhost:8080/health")
-            assert response.status_code == 200, "Main service should be healthy"
-        logger.info("✅ Main service is responding")
+        # Step 2: Start the mock API service
+        logger.info("🌐 Starting mock API service...")
+        mock_service = MockService(Path("tests/samples/petstore-minimal.yaml"), port=8082)
+        mock_service.start()
         
-        # Verify mock service is responding
-        with httpx.Client() as http_client:
-            response = http_client.get("http://localhost:8082/openapi.json")
-            assert response.status_code == 200, "Mock service should serve OpenAPI spec"
-        logger.info("✅ Mock service is responding")
+        # Step 3: Start the web UI driver
+        logger.info("🌐 Starting web UI driver...")
+        ui_driver = WebUIDriver("http://localhost:8080")
         
-        # Step 4: Start browser and navigate to app
-        if not ui_driver.start_browser():
-            assert False, "Failed to start browser"
-        
-        if not ui_driver.navigate_to_app():
-            assert False, "Failed to navigate to app page"
-        
-        # Step 5: Upload OpenAPI spec and generate tests
-        logger.info("📝 Generating tests via web UI...")
-        spec_file = Path("tests/samples/petstore-minimal.yaml")
-        
-        if not ui_driver.upload_spec_file(spec_file):
-            assert False, "Failed to upload spec file"
-        
-        if not ui_driver.set_test_parameters(cases_per_endpoint=5, domain_hint="petstore"):
-            assert False, "Failed to set test parameters"
-        
-        if not ui_driver.submit_form():
-            assert False, "Failed to submit form"
-        
-        # Step 6: Wait for generation to complete
-        if not ui_driver.wait_for_generation_complete():
-            assert False, "Test generation did not complete"
-        
-        # Step 7: Get the downloaded ZIP file
-        logger.info("📦 Getting downloaded ZIP file...")
-        zip_file_path = ui_driver.get_downloaded_file_path()
-        if not zip_file_path:
-            assert False, "Failed to get downloaded ZIP file"
-        
-        # Step 8: Extract and run the generated tests
-        logger.info("🔍 Extracting and running generated tests...")
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
+        try:
+            # Wait for services to be ready
+            time.sleep(3)
             
-            # Extract ZIP file
-            with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-                zip_ref.extractall(temp_path)
+            # Verify main service is responding
+            with httpx.Client() as http_client:
+                response = http_client.get("http://localhost:8080/health")
+                assert response.status_code == 200, "Main service should be healthy"
+            logger.info("✅ Main service is responding")
             
-            logger.info(f"📦 Extracted test files to: {temp_path}")
+            # Verify mock service is responding
+            with httpx.Client() as http_client:
+                response = http_client.get("http://localhost:8082/openapi.json")
+                assert response.status_code == 200, "Mock service should serve OpenAPI spec"
+            logger.info("✅ Mock service is responding")
             
-            # Test Java framework
-            logger.info("☕ Testing Java framework...")
-            java_dir = temp_path / "artifacts" / "junit"
-            if java_dir.exists():
-                java_runner = JavaTestRunner()
-                java_success = java_runner.run_tests(java_dir, "http://localhost:8082")
-                assert java_success, "Java tests should compile and run against the mock service"
-                logger.info("✅ Java framework test completed")
-            else:
-                logger.warning("⚠️  Java artifacts not found in generated ZIP")
+            # Step 4: Start browser and navigate to app
+            if not ui_driver.start_browser():
+                assert False, "Failed to start browser"
             
-            # Test Python framework
-            logger.info("🐍 Testing Python framework...")
-            python_dir = temp_path / "artifacts" / "python"
-            if python_dir.exists():
-                python_runner = PythonTestRunner()
-                python_success = python_runner.run_tests(python_dir, "http://localhost:8082")
-                assert python_success, "Python tests should run against the mock service"
-                logger.info("✅ Python framework test completed")
-            else:
-                logger.warning("⚠️  Python artifacts not found in generated ZIP")
+            if not ui_driver.navigate_to_app():
+                assert False, "Failed to navigate to app page"
             
-            # Test Node.js framework
-            logger.info("🟢 Testing Node.js framework...")
-            node_dir = temp_path / "artifacts" / "nodejs"
-            if node_dir.exists():
-                node_runner = NodeTestRunner()
-                node_success = node_runner.run_tests(node_dir, "http://localhost:8082")
-                assert node_success, "Node.js tests should run against the mock service"
-                logger.info("✅ Node.js framework test completed")
-            else:
-                logger.warning("⚠️  Node.js artifacts not found in generated ZIP")
-        
-        # Step 9: Verify results
-        logger.info("✅ All tests passed! End-to-end test successful.")
+            # Step 5: Upload OpenAPI spec and generate tests
+            logger.info("📝 Generating tests via web UI...")
+            spec_file = Path("tests/samples/petstore-minimal.yaml")
+            
+            if not ui_driver.upload_spec_file(spec_file):
+                assert False, "Failed to upload spec file"
+            
+            if not ui_driver.set_test_parameters(cases_per_endpoint=5, domain_hint="petstore"):
+                assert False, "Failed to set test parameters"
+            
+            if not ui_driver.submit_form():
+                assert False, "Failed to submit form"
+            
+            # Step 6: Wait for generation to complete
+            if not ui_driver.wait_for_generation_complete():
+                assert False, "Test generation did not complete"
+            
+            # Step 7: Get the downloaded ZIP file
+            logger.info("📦 Getting downloaded ZIP file...")
+            zip_file_path = ui_driver.get_downloaded_file_path()
+            if not zip_file_path:
+                assert False, "Failed to get downloaded ZIP file"
+            
+            # Step 8: Extract and run the generated tests
+            logger.info("🔍 Extracting and running generated tests...")
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
+                
+                # Extract ZIP file
+                with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                    zip_ref.extractall(temp_path)
+                
+                logger.info(f"📦 Extracted test files to: {temp_path}")
+                
+                # Test Java framework
+                logger.info("☕ Testing Java framework...")
+                java_dir = temp_path / "artifacts" / "junit"
+                if java_dir.exists():
+                    java_runner = JavaTestRunner()
+                    java_success = java_runner.run_tests(java_dir, "http://localhost:8082")
+                    assert java_success, "Java tests should compile and run against the mock service"
+                    logger.info("✅ Java framework test completed")
+                else:
+                    logger.warning("⚠️  Java artifacts not found in generated ZIP")
+                
+                # Test Python framework
+                logger.info("🐍 Testing Python framework...")
+                python_dir = temp_path / "artifacts" / "python"
+                if python_dir.exists():
+                    python_runner = PythonTestRunner()
+                    python_success = python_runner.run_tests(python_dir, "http://localhost:8082")
+                    assert python_success, "Python tests should run against the mock service"
+                    logger.info("✅ Python framework test completed")
+                else:
+                    logger.warning("⚠️  Python artifacts not found in generated ZIP")
+                
+                # Test Node.js framework
+                logger.info("🟢 Testing Node.js framework...")
+                node_dir = temp_path / "artifacts" / "nodejs"
+                if node_dir.exists():
+                    node_runner = NodeTestRunner()
+                    node_success = node_runner.run_tests(node_dir, "http://localhost:8082")
+                    assert node_success, "Node.js tests should run against the mock service"
+                    logger.info("✅ Node.js framework test completed")
+                else:
+                    logger.warning("⚠️  Node.js artifacts not found in generated ZIP")
+            
+            # Step 9: Verify results
+            logger.info("✅ All tests passed! End-to-end test successful.")
+            
+        finally:
+            # Clean up
+            ui_driver.stop_browser()
+            mock_service.stop()
+            web_service.stop()
+            logger.info("🧹 Cleanup completed")
+            
+    except TimeoutError as e:
+        logger.error(f"❌ E2E test timed out: {e}")
+        # Clean up any running services
+        try:
+            if 'ui_driver' in locals():
+                ui_driver.stop_browser()
+            if 'mock_service' in locals():
+                mock_service.stop()
+            if 'web_service' in locals():
+                web_service.stop()
+        except:
+            pass
+        raise AssertionError(f"Critical e2e test timed out: {e}")
         
     finally:
-        # Clean up
-        ui_driver.stop_browser()
-        mock_service.stop()
-        web_service.stop()
-        logger.info("🧹 Cleanup completed")
+        # Cancel the alarm
+        signal.alarm(0)
 
 
 def test_generator_service_health():
