@@ -1,4 +1,57 @@
-"""FastAPI main application"""
+"""
+FastAPI main application
+
+ENDPOINT DESIGN PRINCIPLES:
+==========================
+
+1. /api/generate (JSON API Endpoint):
+   - Purpose: Programmatic/API access
+   - Input: JSON payload (GenerateRequest schema)
+   - Processing: Sync OR Async (configurable)
+   - Output: ZIP file (sync) OR task_id (async)
+   - Use cases: API integrations, CI/CD, automation
+
+2. /generate-ui (Web UI Endpoint):
+   - Purpose: Web form submissions
+   - Input: Form data (multipart/form-data) with file uploads
+   - Processing: Currently Sync (for compatibility), Future: Async
+   - Output: Currently ZIP file, Future: task_id for WebSocket progress
+   - Use cases: Web UI, file uploads, immediate download (current)
+
+3. /api/download/{task_id} (Download Endpoint):
+   - Purpose: Retrieve completed generation results
+   - Input: task_id from async generation
+   - Output: ZIP file with generated artifacts
+   - Use cases: Download results after background processing
+
+4. /ws/{task_id} (WebSocket Endpoint):
+   - Purpose: Real-time progress updates
+   - Input: task_id connection
+   - Output: Live progress messages
+   - Use cases: UI progress indicators, status updates
+
+CURRENT STATE & FUTURE PLANS:
+============================
+
+CURRENT:
+- /api/generate: JSON API with sync/async support ✅
+- /generate-ui: Form-based, synchronous, returns ZIP file ✅
+- WebSocket infrastructure: Built but not yet integrated ✅
+- E2E tests: Passing with current synchronous behavior ✅
+
+FUTURE (Phase 2):
+- /generate-ui: Convert to async with WebSocket progress
+- Frontend: Update to handle task_id and progress tracking
+- E2E tests: Update to test async flow with progress indicators
+- Download: Use /api/download/{task_id} for completed tasks
+
+IMPORTANT: Maintain this separation of concerns!
+- /api/generate for JSON API consumers
+- /generate-ui for web form submissions
+- Never mix JSON and form data handling
+- Always use appropriate endpoint for the use case
+"""
+
 import base64
 import datetime
 import gc
@@ -25,6 +78,10 @@ from app.generation.cases import generate_test_cases, generate_test_cases_with_p
 # Global semaphore to limit concurrent requests
 import asyncio
 request_semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
+
+# IMPORTANT: /api/generate endpoint is JSON-only for API consumers
+# This endpoint should NEVER accept form data or file uploads
+# Use /generate-ui for web form submissions with file uploads
 
 # Configure logging
 logging.basicConfig(level=settings.log_level)
@@ -90,6 +147,14 @@ async def status():
 
 # Import WebSocket manager
 from app.websocket_manager import websocket_manager
+
+# TODO: PHASE 2 - Convert /generate-ui to asynchronous with WebSocket progress
+# Current behavior: Synchronous, returns ZIP file directly
+# Future behavior: Asynchronous, returns task_id, uses WebSocket for progress
+# This change will require:
+# 1. Frontend updates to handle task_id and progress tracking
+# 2. E2E test updates to test async flow
+# 3. Integration with /api/download/{task_id} endpoint
 
 @app.websocket("/ws/{task_id}")
 async def websocket_endpoint(websocket: WebSocket, task_id: str):
@@ -158,81 +223,70 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
 
 @app.post("/api/generate")
 async def generate(
-    request: Request,
+    request: GenerateRequest,
     background_tasks: BackgroundTasks = None
 ):
-    """Generate test artifacts from OpenAPI spec"""
+    """
+    Generate test artifacts from OpenAPI spec - JSON API endpoint
+    
+    IMPORTANT: This endpoint is designed for programmatic/API access and should:
+    1. ALWAYS accept JSON payloads (GenerateRequest schema)
+    2. NEVER accept form data or file uploads
+    3. Support both synchronous and asynchronous processing
+    4. Return either a ZIP file (sync) or task_id (async)
+    
+    Use cases:
+    - API integrations
+    - CI/CD pipelines  
+    - Automated testing
+    - Background job processing
+    
+    For web UI form submissions, use /generate-ui instead.
+    """
     try:
-        # Parse form data
-        form_data = await request.form()
-        
-        # Extract parameters
-        file = form_data.get("file")
-        spec_url = form_data.get("specUrl")
-        cases_per_endpoint = int(form_data.get("casesPerEndpoint", 10))
-        outputs = json.loads(form_data.get("outputs", '["junit", "postman"]'))
-        domain_hint = form_data.get("domainHint")
-        seed = form_data.get("seed")
-        ai_speed = form_data.get("aiSpeed", "fast")
-        use_background = form_data.get("use_background", "false").lower() == "true"
-        
-        # Prepare OpenAPI input
-        openapi_input = None
-        if file and hasattr(file, 'filename') and file.filename:
-            content = await file.read()
-            openapi_input = base64.b64encode(content).decode()
-        elif spec_url:
-            openapi_input = spec_url
-        else:
-            raise ValueError("Please upload an OpenAPI specification file or provide a URL")
-        
-        # Create request object
-        generate_request = GenerateRequest(
-            openapi=openapi_input,
-            casesPerEndpoint=cases_per_endpoint,
-            outputs=outputs,
-            domainHint=domain_hint,
-            seed=int(seed) if seed else None,
-            aiSpeed=ai_speed
-        )
-        
         # Check if background processing is requested
+        use_background = getattr(request, 'use_background', False)
+        
         if use_background:
-            # Generate unique request ID for progress tracking
+            # ASYNC MODE: Start background task and return task_id immediately
+            # This allows API consumers to track progress via WebSocket
             import uuid
             task_id = str(uuid.uuid4())
             
-            # Start background task
+            # Start background task with progress tracking
             background_tasks.add_task(
                 generate_test_artifacts_background,
                 task_id,
-                generate_request
+                request
             )
             
-            # Return task ID immediately
+            # Return task ID for WebSocket progress tracking
             return {"task_id": task_id, "status": "started"}
         else:
-            # Synchronous generation (for direct API calls)
+            # SYNC MODE: Generate immediately and return ZIP file
+            # This is useful for quick API calls that need immediate results
+            logger.info("Processing synchronous API generation request")
+            
             # Load and normalize the spec
-            spec = await load_openapi_spec(generate_request.openapi)
+            spec = await load_openapi_spec(request.openapi)
             normalized = normalize_openapi(spec)
 
             # Generate test cases
             artifacts = await generate_test_cases(
                 normalized,
-                cases_per_endpoint=generate_request.casesPerEndpoint,
-                outputs=generate_request.outputs,
-                domain_hint=generate_request.domainHint,
-                seed=generate_request.seed,
-                ai_speed=generate_request.aiSpeed
+                cases_per_endpoint=request.casesPerEndpoint,
+                outputs=request.outputs,
+                domain_hint=request.domainHint,
+                seed=request.seed,
+                ai_speed=request.aiSpeed
             )
 
-            # Create ZIP file
+            # Create ZIP file for immediate download
             with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
                 zip_path = Path(tmp.name)
                 create_artifact_zip(artifacts, zip_path)
 
-            # Return ZIP file
+            # Return ZIP file directly
             response = FileResponse(
                 zip_path,
                 media_type="application/octet-stream",
@@ -339,7 +393,26 @@ async def generate_ui(
     seed: Optional[int] = Form(None),
     aiSpeed: str = Form("fast")
 ):
-    """Handle form submission from UI"""
+    """
+    Handle form submission from UI - Currently synchronous for compatibility
+    
+    IMPORTANT: This endpoint is designed for web UI form submissions and should:
+    1. ALWAYS accept form data (multipart/form-data) with file uploads
+    2. NEVER accept JSON payloads
+    3. Currently processes synchronously (will be async in future)
+    4. Returns ZIP file directly for immediate download
+    5. Will eventually use WebSocket progress tracking
+    
+    Use cases:
+    - Web UI form submissions
+    - File uploads from browsers
+    - Immediate file download (current)
+    - Future: Real-time progress tracking via WebSocket
+    
+    For programmatic API access, use /api/generate instead.
+    
+    TODO: Convert to asynchronous with WebSocket progress tracking
+    """
     async with request_semaphore:  # Limit concurrent requests
         try:
             logger.info(f"UI generation request received: file={file.filename if file else None}, specUrl={specUrl}, casesPerEndpoint={casesPerEndpoint}, outputs={outputs}, domainHint={domainHint}, seed={seed}, aiSpeed={aiSpeed}")
