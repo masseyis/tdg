@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 """
-Post-deployment end-to-end test for the test generation service
+CRITICAL: Post-deployment end-to-end test for the test generation service
+
+⚠️  IMPORTANT NOTES TO SELF:
+1. ALL TESTS MUST RUN WITH COVERAGE AND PASS BEFORE DEPLOYMENT
+2. The e2e test is the most important - it validates the complete user journey
+3. This post-deploy test must fully mimic user behavior, just like the e2e test does
+4. This test must ALWAYS run against the deployed site, never locally
+5. This test validates the deployed service works exactly like local development
 
 This test validates the complete user experience against the live deployment:
-1. Connects to the deployed Fly.io service
+1. Connects to the deployed Fly.io service (https://tdg-mvp.fly.dev)
 2. Uploads an OpenAPI spec via the web UI
 3. Generates test files for Java, Python, and Node.js
 4. Compiles and runs the generated tests against a mock service
 5. Validates that all frameworks work correctly
 
-This ensures the deployed version is working correctly.
+This ensures the deployed version is working correctly and provides
+the same user experience as the local development environment.
 """
 
 import asyncio
@@ -287,15 +295,18 @@ class NodeTestRunner:
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="This test is for post-deployment validation only")
 async def test_deployed_service_complete_user_experience():
     """
-    Test the complete user experience against the deployed service
+    CRITICAL: Post-deployment test against live site
     
-    This test validates that the deployed Fly.io service can:
-    1. Accept OpenAPI specifications
-    2. Generate test files for all frameworks
-    3. Produce working test code that compiles and runs
+    This test mimics the e2e test but runs against the deployed service:
+    1. Connects to https://tdg-mvp.fly.dev
+    2. Tests complete user journey: File upload → Generation → Download → Test execution
+    3. Validates deployed service works exactly like local e2e test
+    4. Must always run against the deployed site, never locally
+    
+    IMPORTANT: This test validates the deployed service is working correctly
+    and provides the same user experience as the local development environment.
     """
     
     # Start mock service for testing generated code

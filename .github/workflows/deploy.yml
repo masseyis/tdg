@@ -1,13 +1,21 @@
 name: Deploy to Fly.io
 
+# ⚠️  CRITICAL: This workflow only runs after ALL tests pass with coverage
+# The comprehensive test suite must complete successfully before deployment
+# This ensures the deployed service works exactly like local development
+
 on:
   workflow_run:
-    workflows: ["Test Suite"]
+    workflows: ["Comprehensive Test Suite"]
     types:
       - completed
     branches: [main]
 
 jobs:
+  # CRITICAL: This job only runs after comprehensive test suite passes
+  # All tests must run with coverage and pass before deployment
+  # The e2e test validates the complete user journey
+  # The post-deploy test validates the deployed service works correctly
   deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
