@@ -897,6 +897,187 @@ def test_complete_user_experience():
             logger.warning(f"⚠️  Cleanup error: {cleanup_error}")
 
 
+@pytest.mark.timeout(600)  # 10 minute timeout for AI testing
+def test_complete_user_experience_with_ai():
+    """
+    ⚠️  CRITICAL: This test validates AI integration with real OpenAI calls! ⚠️
+    
+    This test is similar to the main e2e test but uses the real AI provider
+    to catch AI integration issues that the null provider test misses.
+    
+    This test will catch:
+    - OpenAI API failures
+    - JSON parsing issues
+    - AI response format problems
+    - Timeout issues with real AI calls
+    
+    IMPORTANT: This test only runs when OPENAI_API_KEY is set
+    """
+    
+    # Check if we have OpenAI API key for real AI testing
+    if not os.getenv('OPENAI_API_KEY'):
+        pytest.skip("OPENAI_API_KEY not set - skipping AI integration test")
+    
+    logger.info("🤖 Running e2e test with REAL AI provider (OpenAI)")
+    
+    # Detect if we're running in CI
+    is_ci = os.getenv('CI') == 'true' or os.getenv('GITHUB_ACTIONS') == 'true'
+    
+    if is_ci:
+        logger.info("🚀 Running in CI environment - expecting services to be available")
+        # In CI, we should have services running, so use default ports
+        web_port = 8000  # CI uses port 8000
+        mock_port = 8082
+    else:
+        logger.info("💻 Running in local environment - starting services ourselves")
+        # In local dev, use random ports to avoid conflicts
+        web_port = None
+        mock_port = None
+    
+    # Step 1: Start the main web service
+    logger.info("🌐 Starting main web service...")
+    web_service = WebService(port=web_port)
+    web_service.start()
+    
+    # Step 2: Start the mock API service
+    logger.info("🌐 Starting mock API service...")
+    if mock_port is None:
+        mock_port = web_service._find_random_port()
+    mock_service = MockService(Path("tests/samples/petstore-minimal.yaml"), port=mock_port)
+    mock_service.start()
+    
+    # Step 3: Start the web UI driver
+    logger.info("🌐 Starting web UI driver...")
+    ui_driver = WebUIDriver(f"http://localhost:{web_service.port}")
+    
+    try:
+        # Wait for services to be ready
+        logger.info("⏳ Waiting for services to be ready...")
+        time.sleep(5)
+        
+        # Verify web service is responding
+        logger.info("🔍 Verifying web service health...")
+        with httpx.Client() as http_client:
+            response = http_client.get(f"http://localhost:{web_service.port}/health")
+            assert response.status_code == 200, f"Web service should be healthy, got {response.status_code}"
+        logger.info("✅ Web service is responding")
+        
+        # Verify mock service is responding
+        logger.info("🔍 Verifying mock service health...")
+        with httpx.Client() as http_client:
+            response = http_client.get(f"http://localhost:{mock_port}/openapi.json")
+            assert response.status_code == 200, f"Mock service should serve OpenAPI spec, got {response.status_code}"
+        logger.info("✅ Mock service is responding")
+        
+        # Step 4: Start browser and navigate to app
+        logger.info("🌐 Starting browser...")
+        if not ui_driver.start_browser():
+            raise AssertionError("Browser failed to start")
+        logger.info("✅ Browser started successfully")
+        
+        logger.info("🧭 Navigating to app page...")
+        if not ui_driver.navigate_to_app():
+            raise AssertionError("Failed to navigate to app page")
+        logger.info("✅ Successfully navigated to app page")
+        
+        # Step 5: Upload OpenAPI spec and generate tests with AI
+        logger.info("📝 Generating tests via web UI with REAL AI...")
+        spec_file = Path("tests/samples/petstore-minimal.yaml")
+        
+        if not ui_driver.upload_spec_file(spec_file):
+            raise AssertionError("Failed to upload spec file")
+        logger.info("✅ Spec file uploaded successfully")
+        
+        # Use fewer cases for AI testing to avoid timeouts
+        if not ui_driver.set_test_parameters(cases_per_endpoint=2, domain_hint="petstore"):
+            raise AssertionError("Failed to set test parameters")
+        logger.info("✅ Test parameters set successfully")
+        
+        if not ui_driver.submit_form():
+            raise AssertionError("Failed to submit form")
+        logger.info("✅ Form submitted successfully")
+        
+        # Step 6: Wait for generation to complete via the UI (with longer timeout for AI)
+        logger.info("⏳ Waiting for AI test generation to complete via the UI...")
+        
+        # The UI should handle the form submission and show progress/completion
+        # This tests the complete user journey with real AI integration
+        if not ui_driver.wait_for_generation_complete():
+            raise AssertionError("AI test generation did not complete via the UI")
+        logger.info("✅ AI test generation completed successfully via the UI")
+        
+        # Step 7: Get the downloaded ZIP file
+        logger.info("📦 Getting downloaded ZIP file from AI generation...")
+        zip_file_path = ui_driver.get_downloaded_file_path()
+        if not zip_file_path:
+            raise AssertionError("Failed to get downloaded ZIP file from AI generation")
+        logger.info(f"✅ ZIP file downloaded from AI generation: {zip_file_path}")
+        
+        # Step 8: Extract and run the generated tests
+        logger.info("🔍 Extracting and running AI-generated tests...")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            
+            # Extract ZIP file
+            with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_path)
+            
+            logger.info(f"📦 Extracted AI-generated test files to: {temp_path}")
+            
+            # Test Java framework
+            logger.info("☕ Testing AI-generated Java framework...")
+            java_dir = temp_path / "artifacts" / "junit"
+            if java_dir.exists():
+                java_runner = JavaTestRunner()
+                java_success = java_runner.run_tests(java_dir, f"http://localhost:{mock_port}")
+                assert java_success, "AI-generated Java tests should compile and run against the mock service"
+                logger.info("✅ AI-generated Java framework test completed")
+            else:
+                logger.warning("⚠️  AI-generated Java artifacts not found in generated ZIP")
+            
+            # Test Python framework
+            logger.info("🐍 Testing AI-generated Python framework...")
+            python_dir = temp_path / "artifacts" / "python"
+            if python_dir.exists():
+                python_runner = PythonTestRunner()
+                python_success = python_runner.run_tests(python_dir, f"http://localhost:{mock_port}")
+                assert python_success, "AI-generated Python tests should run against the mock service"
+                logger.info("✅ AI-generated Python framework test completed")
+            else:
+                logger.warning("⚠️  AI-generated Python artifacts not found in generated ZIP")
+            
+            # Test Node.js framework
+            logger.info("🟢 Testing AI-generated Node.js framework...")
+            node_dir = temp_path / "artifacts" / "nodejs"
+            if node_dir.exists():
+                node_runner = NodeTestRunner()
+                node_success = node_runner.run_tests(node_dir, f"http://localhost:{mock_port}")
+                assert node_success, "AI-generated Node.js tests should run against the mock service"
+                logger.info("✅ AI-generated Node.js framework test completed")
+            else:
+                logger.warning("⚠️  AI-generated Node.js artifacts not found in generated ZIP")
+        
+        # Step 9: Verify results
+        logger.info("✅ All AI integration tests passed! Real AI e2e test successful.")
+        logger.info("🎉 AI integration is working correctly!")
+        
+    except Exception as e:
+        logger.error(f"❌ AI integration e2e test failed: {e}")
+        raise
+    finally:
+        # Clean up
+        try:
+            if 'ui_driver' in locals():
+                ui_driver.stop_browser()
+            if 'mock_service' in locals():
+                mock_service.stop()
+            if 'web_service' in locals():
+                web_service.stop()
+            logger.info("🧹 Cleanup completed")
+        except Exception as cleanup_error:
+            logger.warning(f"⚠️  Cleanup error: {cleanup_error}")
+
+
 def test_generator_service_health():
     """Test that the generator service is healthy"""
     
