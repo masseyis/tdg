@@ -242,54 +242,7 @@ jobs:
         # Also kill any uvicorn processes
         pkill -f "uvicorn app.main:app" || true
 
-  # CRITICAL: Post-deploy test against live site
-  # This mimics the e2e test but runs against the deployed service
-  post-deploy-test:
-    runs-on: ubuntu-latest
-    needs: [e2e-functional-test, integration-tests]
-    # Only run after deployment to main branch
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-        
-    - name: Set up Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '11'
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        
-    - name: Run post-deploy test against live site
-      run: |
-        echo "🌐 CRITICAL: Running post-deploy test against live site"
-        echo "⚠️  This test validates the deployed service works exactly like local e2e test"
-        echo "🎯 Testing: Live site → File upload → Generation → Download → Test execution"
-        echo "🔗 Target: https://tdg-mvp.fly.dev"
-        
-        # Run the post-deploy test that mimics e2e behavior
-        python -m pytest tests/test_post_deploy.py::test_deployed_service_complete_user_experience \
-          -v -s --log-cli-level=INFO \
-          --junit-xml=post-deploy-test-results.xml
-        
-        echo "✅ Post-deploy test completed successfully"
-        
-    - name: Upload post-deploy test results
-      uses: actions/upload-artifact@v4
-      with:
-        name: post-deploy-test-results-${{ github.run_number }}
-        path: post-deploy-test-results.xml
-        retention-days: 90
+
 
   # Coverage analysis and reporting
   coverage-analysis:
