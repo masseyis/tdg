@@ -26,10 +26,11 @@ comprehensive-test-suite → e2e-functional-test → integration-tests → cover
 ```
 
 **comprehensive-test-suite:**
-- Runs ALL tests with coverage
+- Runs ALL tests with coverage (excluding post-deploy tests)
 - Coverage must be >=20%
 - Includes linting and code quality checks
 - Must pass before any other jobs run
+- Uses pytest marker `-m "not post_deploy"` to exclude post-deployment tests
 
 **e2e-functional-test:**
 - Runs the critical e2e test
@@ -80,6 +81,8 @@ Deploy to Fly.io → Post-deployment validation
 - **Scope**: Live deployed service
 - **Purpose**: Validate production deployment works
 - **Environment**: https://tdg-mvp.fly.dev
+- **Marker**: `@pytest.mark.post_deploy`
+- **Execution**: Only runs after successful deployment, never in pre-deploy test suite
 
 ## 📊 Coverage Requirements
 
