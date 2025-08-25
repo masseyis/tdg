@@ -13,10 +13,11 @@
    - Runs locally with full browser automation
 
 2. **Post-Deploy Test** (`test_deployed_service_complete_user_experience`) - **CRITICAL**
-   - Mimics the e2e test but runs against the live deployed site
+   - Reuses the same code as the e2e test but runs against the live deployed site
    - Target: https://tdg-mvp.fly.dev
    - Validates deployed service works exactly like local development
    - Must always run against the deployed site, never locally
+   - **IMPORTANT**: Uses same WebUIDriver and test logic as e2e test - no duplicate code to maintain
 
 ## 🔄 Workflow Overview
 
@@ -83,6 +84,7 @@ Deploy to Fly.io → Post-deployment validation
 - **Environment**: https://tdg-mvp.fly.dev
 - **Marker**: `@pytest.mark.post_deploy`
 - **Execution**: Only runs after successful deployment, never in pre-deploy test suite
+- **Code Reuse**: Uses same WebUIDriver and test logic as e2e test - single source of truth
 
 ## 📊 Coverage Requirements
 
