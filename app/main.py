@@ -151,6 +151,27 @@ async def health():
     return "OK"
 
 
+@app.get("/sentry-debug")
+async def trigger_error():
+    """Test endpoint to trigger a Sentry error for debugging purposes"""
+    try:
+        # Intentionally trigger a division by zero error
+        division_by_zero = 1 / 0
+        return {"message": "This should never be reached"}
+    except Exception as e:
+        # Capture the error in Sentry with context
+        capture_exception(
+            e,
+            {
+                "endpoint": "sentry-debug",
+                "test_type": "division_by_zero",
+                "purpose": "sentry_integration_test",
+            },
+        )
+        # Re-raise the exception so it's also logged normally
+        raise HTTPException(status_code=500, detail="Sentry test error triggered successfully")
+
+
 @app.get("/status")
 async def status():
     """Get current service status and concurrency info"""
