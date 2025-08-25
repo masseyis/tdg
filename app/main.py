@@ -122,21 +122,27 @@ async def index(request: Request):
 @app.get("/app", response_class=HTMLResponse)
 async def app_page(request: Request):
     """Render app page"""
-    return templates.TemplateResponse("app.html", {
-        "request": request,
-        "sentry_dsn": settings.sentry_dsn,
-        "sentry_environment": settings.sentry_environment,
-    })
+    return templates.TemplateResponse(
+        "app.html",
+        {
+            "request": request,
+            "sentry_dsn": settings.sentry_dsn,
+            "sentry_environment": settings.sentry_environment,
+        },
+    )
 
 
 @app.post("/app", response_class=HTMLResponse)
 async def app_page_post(request: Request):
     """Handle form submission from app page"""
-    return templates.TemplateResponse("app.html", {
-        "request": request,
-        "sentry_dsn": settings.sentry_dsn,
-        "sentry_environment": settings.sentry_environment,
-    })
+    return templates.TemplateResponse(
+        "app.html",
+        {
+            "request": request,
+            "sentry_dsn": settings.sentry_dsn,
+            "sentry_environment": settings.sentry_environment,
+        },
+    )
 
 
 @app.get("/health")
@@ -325,13 +331,16 @@ async def generate(request: GenerateRequest, background_tasks: BackgroundTasks =
     except Exception as e:
         logger.error(f"API generation error: {e}")
         # Capture error in Sentry with context
-        capture_exception(e, {
-            "endpoint": "api-generate",
-            "use_background": getattr(request, "use_background", False),
-            "cases_per_endpoint": request.casesPerEndpoint,
-            "outputs": request.outputs,
-            "ai_speed": request.aiSpeed,
-        })
+        capture_exception(
+            e,
+            {
+                "endpoint": "api-generate",
+                "use_background": getattr(request, "use_background", False),
+                "cases_per_endpoint": request.casesPerEndpoint,
+                "outputs": request.outputs,
+                "ai_speed": request.aiSpeed,
+            },
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 

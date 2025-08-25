@@ -54,14 +54,15 @@ jobs:
         echo "⚠️  CRITICAL: All tests must pass before deployment!"
         echo "🎯 E2E test is the most important - validates complete user journey"
         
-        # Run all tests with coverage
+        # Run all tests with coverage (excluding post-deploy test)
         python -m pytest tests/ -v \
           --cov=app \
           --cov-report=xml \
           --cov-report=html \
           --cov-report=term-missing \
           --cov-fail-under=20 \
-          --junit-xml=test-results.xml
+          --junit-xml=test-results.xml \
+          -m "not post_deploy"
         
         echo "✅ All tests completed with coverage"
         

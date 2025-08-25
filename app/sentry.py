@@ -43,7 +43,9 @@ def init_sentry() -> None:
             # Configure before_send to filter out certain errors
             before_send=before_send_filter,
         )
-        logger.info(f"Sentry initialized successfully for environment: {settings.sentry_environment}")
+        logger.info(
+            f"Sentry initialized successfully for environment: {settings.sentry_environment}"
+        )
     except Exception as e:
         logger.error(f"Failed to initialize Sentry: {e}")
 
@@ -56,7 +58,7 @@ def before_send_filter(event, hint):
         # Filter out common expected errors
         if exc_type in ["ValidationError", "HTTPException"]:
             return None
-    
+
     return event
 
 
@@ -82,13 +84,17 @@ def capture_message(message: str, level: str = "info", context: Optional[dict] =
         sentry_sdk.capture_message(message, level=level)
 
 
-def set_user_context(user_id: str, email: Optional[str] = None, username: Optional[str] = None) -> None:
+def set_user_context(
+    user_id: str, email: Optional[str] = None, username: Optional[str] = None
+) -> None:
     """Set user context for Sentry events"""
-    sentry_sdk.set_user({
-        "id": user_id,
-        "email": email,
-        "username": username,
-    })
+    sentry_sdk.set_user(
+        {
+            "id": user_id,
+            "email": email,
+            "username": username,
+        }
+    )
 
 
 def set_tag(key: str, value: str) -> None:

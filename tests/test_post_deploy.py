@@ -296,6 +296,7 @@ class NodeTestRunner:
 
 
 @pytest.mark.asyncio
+@pytest.mark.post_deploy
 @pytest.mark.skipif(
     not (os.getenv('CI') == 'true' or os.getenv('GITHUB_ACTIONS') == 'true'),
     reason="This test only runs in CI/CD against the deployed site"
