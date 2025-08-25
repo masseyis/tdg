@@ -52,31 +52,41 @@ IMPORTANT: Maintain this separation of concerns!
 - Always use appropriate endpoint for the use case
 """
 
+# Global semaphore to limit concurrent requests
+import asyncio
 import base64
 import datetime
 import gc
+import json
 import logging
 import tempfile
 from pathlib import Path
 from typing import List, Optional
-from fastapi import WebSocket, WebSocketDisconnect
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, BackgroundTasks
+from fastapi import (
+    BackgroundTasks,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
-import json
 
 from app.config import settings
+from app.generation.cases import generate_test_cases, generate_test_cases_with_progress
 from app.schemas import GenerateRequest, ValidateRequest, ValidateResponse
 from app.utils.openapi_loader import load_openapi_spec
 from app.utils.openapi_normalizer import normalize_openapi
 from app.utils.zipping import create_artifact_zip
-from app.generation.cases import generate_test_cases, generate_test_cases_with_progress
+from app.websocket_manager import websocket_manager
 
-# Global semaphore to limit concurrent requests
-import asyncio
 request_semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
 
 # IMPORTANT: /api/generate endpoint is JSON-only for API consumers
@@ -91,12 +101,13 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Test Data Generator",
     version="0.1.0",
-    description="Generate test data from OpenAPI specifications"
+    description="Generate test data from OpenAPI specifications",
 )
 
 # Setup templates and static files
 templates = Jinja2Templates(directory="app/templates")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -128,13 +139,14 @@ async def status():
     # Get memory usage
     try:
         import psutil
+
         process = psutil.Process()
         memory_info = process.memory_info()
         memory_percent = process.memory_percent()
     except ImportError:
         memory_info = None
         memory_percent = None
-    
+
     return {
         "status": "healthy",
         "concurrent_requests": request_semaphore._value,
@@ -142,11 +154,9 @@ async def status():
         "ai_concurrency_limit": settings.ai_concurrency_limit,
         "max_cases_per_endpoint": settings.max_cases_per_endpoint,
         "memory_usage_mb": round(memory_info.rss / 1024 / 1024, 2) if memory_info else None,
-        "memory_percent": round(memory_percent, 2) if memory_percent else None
+        "memory_percent": round(memory_percent, 2) if memory_percent else None,
     }
 
-# Import WebSocket manager
-from app.websocket_manager import websocket_manager
 
 # TODO: PHASE 2 - Convert /generate-ui to asynchronous with WebSocket progress
 # Current behavior: Synchronous, returns ZIP file directly
@@ -155,6 +165,7 @@ from app.websocket_manager import websocket_manager
 # 1. Frontend updates to handle task_id and progress tracking
 # 2. E2E test updates to test async flow
 # 3. Integration with /api/download/{task_id} endpoint
+
 
 @app.websocket("/ws/{task_id}")
 async def websocket_endpoint(websocket: WebSocket, task_id: str):
@@ -167,6 +178,7 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str):
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
 
+
 @app.get("/progress/{request_id}")
 async def get_progress(request_id: str):
     """Get progress for a specific generation request (fallback for non-WebSocket clients)"""
@@ -178,18 +190,23 @@ async def get_progress(request_id: str):
             "message": progress.message,
             "timestamp": progress.timestamp,
             "endpoint_count": progress.endpoint_count,
-            "current_endpoint": progress.current_endpoint
+            "current_endpoint": progress.current_endpoint,
         }
-    return {
-        "stage": "unknown",
-        "progress": 0,
-        "message": "Request not found"
-    }
+    return {"stage": "unknown", "progress": 0, "message": "Request not found"}
 
-async def update_progress(task_id: str, stage: str, progress: int, message: str = "", 
-                         endpoint_count: Optional[int] = None, current_endpoint: Optional[int] = None):
+
+async def update_progress(
+    task_id: str,
+    stage: str,
+    progress: int,
+    message: str = "",
+    endpoint_count: Optional[int] = None,
+    current_endpoint: Optional[int] = None,
+):
     """Update progress for a generation request"""
-    await websocket_manager.update_progress(task_id, stage, progress, message, endpoint_count, current_endpoint)
+    await websocket_manager.update_progress(
+        task_id, stage, progress, message, endpoint_count, current_endpoint
+    )
 
 
 @app.post("/api/validate")
@@ -210,63 +227,54 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
                 "version": normalized.version,
                 "servers": normalized.servers,
                 "endpoint_count": len(normalized.endpoints),
-                "methods": list(set(e.method for e in normalized.endpoints))
-            }
+                "methods": list(set(e.method for e in normalized.endpoints)),
+            },
         )
     except Exception as e:
         logger.error(f"Validation error: {e}")
-        return ValidateResponse(
-            valid=False,
-            error=str(e)
-        )
+        return ValidateResponse(valid=False, error=str(e))
 
 
 @app.post("/api/generate")
-async def generate(
-    request: GenerateRequest,
-    background_tasks: BackgroundTasks = None
-):
+async def generate(request: GenerateRequest, background_tasks: BackgroundTasks = None):
     """
     Generate test artifacts from OpenAPI spec - JSON API endpoint
-    
+
     IMPORTANT: This endpoint is designed for programmatic/API access and should:
     1. ALWAYS accept JSON payloads (GenerateRequest schema)
     2. NEVER accept form data or file uploads
     3. Support both synchronous and asynchronous processing
     4. Return either a ZIP file (sync) or task_id (async)
-    
+
     Use cases:
     - API integrations
-    - CI/CD pipelines  
+    - CI/CD pipelines
     - Automated testing
     - Background job processing
-    
+
     For web UI form submissions, use /generate-ui instead.
     """
     try:
         # Check if background processing is requested
-        use_background = getattr(request, 'use_background', False)
-        
+        use_background = getattr(request, "use_background", False)
+
         if use_background:
             # ASYNC MODE: Start background task and return task_id immediately
             # This allows API consumers to track progress via WebSocket
             import uuid
+
             task_id = str(uuid.uuid4())
-            
+
             # Start background task with progress tracking
-            background_tasks.add_task(
-                generate_test_artifacts_background,
-                task_id,
-                request
-            )
-            
+            background_tasks.add_task(generate_test_artifacts_background, task_id, request)
+
             # Return task ID for WebSocket progress tracking
             return {"task_id": task_id, "status": "started"}
         else:
             # SYNC MODE: Generate immediately and return ZIP file
             # This is useful for quick API calls that need immediate results
             logger.info("Processing synchronous API generation request")
-            
+
             # Load and normalize the spec
             spec = await load_openapi_spec(request.openapi)
             normalized = normalize_openapi(spec)
@@ -278,7 +286,7 @@ async def generate(
                 outputs=request.outputs,
                 domain_hint=request.domainHint,
                 seed=request.seed,
-                ai_speed=request.aiSpeed
+                ai_speed=request.aiSpeed,
             )
 
             # Create ZIP file for immediate download
@@ -291,15 +299,13 @@ async def generate(
                 zip_path,
                 media_type="application/octet-stream",
                 filename="test-artifacts.zip",
-                headers={
-                    "Content-Disposition": "attachment; filename=test-artifacts.zip"
-                }
+                headers={"Content-Disposition": "attachment; filename=test-artifacts.zip"},
             )
-            
+
             # Clean up memory after generation
             del artifacts
             gc.collect()
-            
+
             return response
 
     except ValidationError as e:
@@ -317,30 +323,36 @@ async def download_task_result(task_id: str):
         progress = websocket_manager.get_progress(task_id)
         if not progress or progress.stage != "complete":
             raise HTTPException(status_code=404, detail="Task not found or not complete")
-        
+
         # For now, we'll need to regenerate the file since we don't store it
         # In a production system, you'd store the file path or content
         # For now, return an error suggesting to use the synchronous endpoint
         raise HTTPException(
-            status_code=501, 
-            detail="Download endpoint not yet implemented. Use synchronous generation for now."
+            status_code=501,
+            detail="Download endpoint not yet implemented. Use synchronous generation for now.",
         )
-        
+
     except Exception as e:
         logger.error(f"Download error for task {task_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 async def generate_test_artifacts_background(task_id: str, request: GenerateRequest):
     """Background task for generating test artifacts"""
     try:
         await update_progress(task_id, "parsing", 10, "Parsing OpenAPI specification...")
-        
+
         # Load and normalize the spec
         spec = await load_openapi_spec(request.openapi)
         normalized = normalize_openapi(spec)
-        
+
         await update_progress(task_id, "parsing", 100, "OpenAPI specification parsed successfully")
-        await update_progress(task_id, "generating", 20, f"Generating test cases for {len(normalized.endpoints)} endpoints...")
+        await update_progress(
+            task_id,
+            "generating",
+            20,
+            f"Generating test cases for {len(normalized.endpoints)} endpoints...",
+        )
 
         # Generate test cases with detailed progress
         await update_progress(task_id, "generating", 30, "Starting AI generation...")
@@ -351,9 +363,9 @@ async def generate_test_artifacts_background(task_id: str, request: GenerateRequ
             outputs=request.outputs,
             domain_hint=request.domainHint,
             seed=request.seed,
-            ai_speed=request.aiSpeed
+            ai_speed=request.aiSpeed,
         )
-        
+
         await update_progress(task_id, "generating", 100, "Test cases generated successfully")
         await update_progress(task_id, "zipping", 20, "Creating ZIP file...")
 
@@ -361,18 +373,20 @@ async def generate_test_artifacts_background(task_id: str, request: GenerateRequ
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
             zip_path = Path(tmp.name)
             create_artifact_zip(artifacts, zip_path)
-        
+
         await update_progress(task_id, "zipping", 100, "ZIP file created successfully")
-        await update_progress(task_id, "complete", 100, "Generation complete! ZIP file ready for download.")
-        
+        await update_progress(
+            task_id, "complete", 100, "Generation complete! ZIP file ready for download."
+        )
+
         # Store the result for later retrieval
         # Note: In a production system, you'd store this in Redis/database
         # For now, we'll just mark it as complete
-        
+
         # Clean up memory after generation
         del artifacts
         gc.collect()
-        
+
     except Exception as e:
         logger.error(f"Background generation error: {e}")
         await update_progress(task_id, "error", 0, f"Generation failed: {str(e)}")
@@ -391,32 +405,34 @@ async def generate_ui(
     outputs: List[str] = Form(["junit", "python", "nodejs", "postman"]),
     domainHint: Optional[str] = Form(None),
     seed: Optional[int] = Form(None),
-    aiSpeed: str = Form("fast")
+    aiSpeed: str = Form("fast"),
 ):
     """
     Handle form submission from UI - Currently synchronous for compatibility
-    
+
     IMPORTANT: This endpoint is designed for web UI form submissions and should:
     1. ALWAYS accept form data (multipart/form-data) with file uploads
     2. NEVER accept JSON payloads
     3. Currently processes synchronously (will be async in future)
     4. Returns ZIP file directly for immediate download
     5. Will eventually use WebSocket progress tracking
-    
+
     Use cases:
     - Web UI form submissions
     - File uploads from browsers
     - Immediate file download (current)
     - Future: Real-time progress tracking via WebSocket
-    
+
     For programmatic API access, use /api/generate instead.
-    
+
     TODO: Convert to asynchronous with WebSocket progress tracking
     """
     async with request_semaphore:  # Limit concurrent requests
         try:
-            logger.info(f"UI generation request received: file={file.filename if file else None}, specUrl={specUrl}, casesPerEndpoint={casesPerEndpoint}, outputs={outputs}, domainHint={domainHint}, seed={seed}, aiSpeed={aiSpeed}")
-            
+            logger.info(
+                f"UI generation request received: file={file.filename if file else None}, specUrl={specUrl}, casesPerEndpoint={casesPerEndpoint}, outputs={outputs}, domainHint={domainHint}, seed={seed}, aiSpeed={aiSpeed}"
+            )
+
             # Prepare OpenAPI input
             openapi_input = None
             if file and file.filename:
@@ -428,14 +444,18 @@ async def generate_ui(
                 logger.info(f"Processing spec URL: {specUrl}")
                 openapi_input = specUrl
             else:
-                raise ValueError("Please upload an OpenAPI specification file (.json, .yaml, .yml) or provide a URL to your OpenAPI spec")
+                raise ValueError(
+                    "Please upload an OpenAPI specification file (.json, .yaml, .yml) or provide a URL to your OpenAPI spec"
+                )
 
             # For UI requests, generate synchronously (no background tasks)
             # Load and normalize the spec
             logger.info("Loading and normalizing OpenAPI spec...")
             spec = await load_openapi_spec(openapi_input)
-            logger.info(f"OpenAPI spec loaded, keys: {list(spec.keys()) if isinstance(spec, dict) else 'Not a dict'}")
-            
+            logger.info(
+                f"OpenAPI spec loaded, keys: {list(spec.keys()) if isinstance(spec, dict) else 'Not a dict'}"
+            )
+
             normalized = normalize_openapi(spec)
             logger.info(f"OpenAPI spec normalized, endpoints: {len(normalized.endpoints)}")
 
@@ -447,9 +467,11 @@ async def generate_ui(
                 outputs=outputs,
                 domain_hint=domainHint,
                 seed=seed,
-                ai_speed=aiSpeed
+                ai_speed=aiSpeed,
             )
-            logger.info(f"Test cases generated, artifacts: {list(artifacts.keys()) if isinstance(artifacts, dict) else 'Not a dict'}")
+            logger.info(
+                f"Test cases generated, artifacts: {list(artifacts.keys()) if isinstance(artifacts, dict) else 'Not a dict'}"
+            )
 
             # Create ZIP file
             logger.info("Creating ZIP file...")
@@ -463,15 +485,13 @@ async def generate_ui(
                 zip_path,
                 media_type="application/octet-stream",
                 filename="test-artifacts.zip",
-                headers={
-                    "Content-Disposition": "attachment; filename=test-artifacts.zip"
-                }
+                headers={"Content-Disposition": "attachment; filename=test-artifacts.zip"},
             )
-            
+
             # Clean up memory after generation
             del artifacts
             gc.collect()
-            
+
             logger.info("UI generation completed successfully")
             return response
 
@@ -483,6 +503,7 @@ async def generate_ui(
             logger.error(f"UI generation error: {e}")
             logger.error(f"Error type: {type(e)}")
             import traceback
+
             logger.error(f"Traceback: {traceback.format_exc()}")
             # Return a proper error response instead of HTML template
             raise HTTPException(status_code=500, detail=str(e))
@@ -494,12 +515,11 @@ async def not_found(request: Request, exc):
     if request.url.path.startswith("/api"):
         return {"error": "Not found"}, 404
     return templates.TemplateResponse(
-        "landing.html",
-        {"request": request, "error": "Page not found"},
-        status_code=404
+        "landing.html", {"request": request, "error": "Page not found"}, status_code=404
     )
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=settings.port)

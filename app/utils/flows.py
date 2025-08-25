@@ -1,15 +1,17 @@
 """Multi-step flow composition utilities"""
-import re
+
 import logging
-from typing import Dict, Any, List, Optional
+import re
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-@dataclass
 
+@dataclass
 class FlowStep:
     """Single step in a test flow"""
+
     name: str
     method: str
     path: str
@@ -18,10 +20,11 @@ class FlowStep:
     extract: Dict[str, str] = field(default_factory=dict)  # var_name: json_path
     assertions: List[Dict[str, Any]] = field(default_factory=list)
 
-@dataclass
 
+@dataclass
 class TestFlow:
     """Multi-step test flow"""
+
     name: str
     description: Optional[str] = None
     steps: List[FlowStep] = field(default_factory=list)
@@ -64,7 +67,7 @@ def create_crud_flow(resource: str, endpoints: List[Any]) -> Optional[TestFlow]:
     """Create CRUD flow for a resource"""
     flow = TestFlow(
         name=f"{resource.title()} CRUD Flow",
-        description=f"Create, Read, Update, Delete flow for {resource}"
+        description=f"Create, Read, Update, Delete flow for {resource}",
     )
 
     # Find POST endpoint (Create)
@@ -76,7 +79,7 @@ def create_crud_flow(resource: str, endpoints: List[Any]) -> Optional[TestFlow]:
             method="POST",
             path=post_ep.path,
             body={"name": f"Test {resource}", "description": "Created by test flow"},
-            extract={"created_id": "$.id", "created_name": "$.name"}
+            extract={"created_id": "$.id", "created_name": "$.name"},
         )
         flow.steps.append(step)
 
@@ -90,8 +93,8 @@ def create_crud_flow(resource: str, endpoints: List[Any]) -> Optional[TestFlow]:
             path=get_ep.path.replace("{id}", "${created_id}"),
             assertions=[
                 {"field": "$.id", "equals": "${created_id}"},
-                {"field": "$.name", "equals": "${created_name}"}
-            ]
+                {"field": "$.name", "equals": "${created_name}"},
+            ],
         )
         flow.steps.append(step)
 
@@ -103,7 +106,7 @@ def create_crud_flow(resource: str, endpoints: List[Any]) -> Optional[TestFlow]:
             name=f"Update {resource}",
             method=update_ep.method,
             path=update_ep.path.replace("{id}", "${created_id}"),
-            body={"name": f"Updated {resource}", "description": "Updated by test flow"}
+            body={"name": f"Updated {resource}", "description": "Updated by test flow"},
         )
         flow.steps.append(step)
 
@@ -115,9 +118,7 @@ def create_crud_flow(resource: str, endpoints: List[Any]) -> Optional[TestFlow]:
             name=f"Delete {resource}",
             method="DELETE",
             path=delete_ep.path.replace("{id}", "${created_id}"),
-            assertions=[
-                {"statusCode": 204}
-            ]
+            assertions=[{"statusCode": 204}],
         )
         flow.steps.append(step)
 
@@ -140,7 +141,7 @@ def resolve_variables(text: str, variables: Dict[str, Any]) -> str:
         var_name = match.group(1)
         return str(variables.get(var_name, match.group(0)))
 
-    return re.sub(r'\$\{([^}]+)\}', replacer, text)
+    return re.sub(r"\$\{([^}]+)\}", replacer, text)
 
 
 def extract_from_response(response: Dict[str, Any], json_path: str) -> Any:

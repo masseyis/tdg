@@ -1,8 +1,10 @@
 """JSON Schema validation utilities"""
+
 import json
 import logging
 from typing import Any, Dict
-from jsonschema import validate, ValidationError, Draft7Validator
+
+from jsonschema import Draft7Validator, ValidationError, validate
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +104,7 @@ def get_default_for_type(schema_type: str) -> Any:
         "boolean": False,
         "array": [],
         "object": {},
-        "null": None
+        "null": None,
     }
     return defaults.get(schema_type, None)
 

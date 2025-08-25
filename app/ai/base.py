@@ -1,12 +1,14 @@
 """Base AI provider interface"""
+
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
 
 @dataclass
-
 class TestCase:
     """Generated test case"""
+
     name: str
     description: Optional[str]
     method: str
@@ -24,11 +26,7 @@ class AIProvider(ABC):
     """Abstract base class for AI providers"""
 
     @abstractmethod
-    async def generate_cases(
-        self,
-        endpoint: Any,
-        options: Dict[str, Any]
-    ) -> List[TestCase]:
+    async def generate_cases(self, endpoint: Any, options: Dict[str, Any]) -> List[TestCase]:
         """
         Generate test cases for an endpoint
 
@@ -42,7 +40,6 @@ class AIProvider(ABC):
         pass
 
     @abstractmethod
-
     def is_available(self) -> bool:
         """Check if provider is available (has API key, etc.)"""
         pass
@@ -58,16 +55,16 @@ def get_provider(provider_name: Optional[str] = None) -> AIProvider:
     Returns:
         AI provider instance
     """
-    from app.ai.null_provider import NullProvider
-    from app.ai.openai_provider import OpenAIProvider
     from app.ai.anthropic_provider import AnthropicProvider
     from app.ai.fast_provider import FastAIProvider
+    from app.ai.null_provider import NullProvider
+    from app.ai.openai_provider import OpenAIProvider
 
     providers = {
         "null": NullProvider(),
         "openai": OpenAIProvider(),
         "anthropic": AnthropicProvider(),
-        "fast": FastAIProvider()
+        "fast": FastAIProvider(),
     }
 
     # Auto-detect if not specified
@@ -94,16 +91,16 @@ def get_provider_for_speed(speed: str) -> AIProvider:
     Returns:
         AI provider instance optimized for speed
     """
-    from app.ai.null_provider import NullProvider
-    from app.ai.openai_provider import OpenAIProvider
     from app.ai.anthropic_provider import AnthropicProvider
     from app.ai.fast_provider import FastAIProvider
+    from app.ai.null_provider import NullProvider
+    from app.ai.openai_provider import OpenAIProvider
 
     providers = {
         "null": NullProvider(),
         "openai": OpenAIProvider(),
         "anthropic": AnthropicProvider(),
-        "fast": FastAIProvider()
+        "fast": FastAIProvider(),
     }
 
     if speed == "fast":
@@ -116,7 +113,7 @@ def get_provider_for_speed(speed: str) -> AIProvider:
         # Try Anthropic with haiku
         if providers["anthropic"].is_available():
             return providers["anthropic"]
-    
+
     elif speed == "balanced":
         # Use balanced models
         if providers["openai"].is_available():
@@ -125,7 +122,7 @@ def get_provider_for_speed(speed: str) -> AIProvider:
             return providers["anthropic"]
         if providers["fast"].is_available():
             return providers["fast"]
-    
+
     elif speed == "quality":
         # Use highest quality models
         if providers["openai"].is_available():
@@ -134,6 +131,6 @@ def get_provider_for_speed(speed: str) -> AIProvider:
             return providers["anthropic"]
         if providers["fast"].is_available():
             return providers["fast"]
-    
+
     # Fallback to null provider
     return providers["null"]

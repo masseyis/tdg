@@ -1,6 +1,7 @@
 """Prompt templates for AI providers"""
+
 import json
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def get_test_generation_prompt(endpoint: Any, options: Dict[str, Any]) -> str:
@@ -24,21 +25,16 @@ def get_test_generation_prompt(endpoint: Any, options: Dict[str, Any]) -> str:
         "operation_id": endpoint.operation_id,
         "description": endpoint.description,
         "parameters": [
-            {
-                "name": p.name,
-                "in": p.location,
-                "required": p.required,
-                "schema": p.schema
-            }
+            {"name": p.name, "in": p.location, "required": p.required, "schema": p.schema}
             for p in endpoint.parameters
         ],
         "request_body": endpoint.request_body,
-        "responses": endpoint.responses
+        "responses": endpoint.responses,
     }
 
     # Domain-specific guidance
     domain_guidance = _get_domain_guidance(domain_hint)
-    
+
     # Prioritize POST operations for better test data
     method_emphasis = ""
     if endpoint_desc.get("method") == "POST":
@@ -49,7 +45,7 @@ def get_test_generation_prompt(endpoint: Any, options: Dict[str, Any]) -> str:
 - Avoid empty, null, or minimal payloads
 - Create varied, comprehensive examples that test different data scenarios
 """
-    
+
     prompt = f"""Generate {count} comprehensive test cases for the following API endpoint.
 
 Endpoint Details:
@@ -139,7 +135,7 @@ Generate the test cases now:
 def _get_domain_guidance(domain_hint: str) -> str:
     """Get domain-specific guidance for test generation"""
     domain_hint_lower = domain_hint.lower() if domain_hint else ""
-    
+
     if "pet" in domain_hint_lower or "animal" in domain_hint_lower:
         return """Pet Store Domain Guidance:
 - Use realistic pet names: Buddy, Luna, Max, Bella, Charlie, Daisy
@@ -150,7 +146,11 @@ def _get_domain_guidance(domain_hint: str) -> str:
 - Test pet-specific edge cases: very long pet names, special characters in names
 - Test invalid pet data: negative ages, invalid statuses, malformed photo URLs"""
 
-    elif "ecommerce" in domain_hint_lower or "shop" in domain_hint_lower or "store" in domain_hint_lower:
+    elif (
+        "ecommerce" in domain_hint_lower
+        or "shop" in domain_hint_lower
+        or "store" in domain_hint_lower
+    ):
         return """E-commerce Domain Guidance:
 - Use realistic product names: iPhone 15 Pro, Nike Air Max, Samsung TV
 - Use realistic prices: $999.99, €299.50, £149.99
@@ -171,7 +171,11 @@ def _get_domain_guidance(domain_hint: str) -> str:
 - Test username uniqueness and format rules
 - Test authentication scenarios: valid/invalid credentials"""
 
-    elif "financial" in domain_hint_lower or "bank" in domain_hint_lower or "payment" in domain_hint_lower:
+    elif (
+        "financial" in domain_hint_lower
+        or "bank" in domain_hint_lower
+        or "payment" in domain_hint_lower
+    ):
         return """Financial Domain Guidance:
 - Use realistic amounts: $1,234.56, €999.99, £2,500.00
 - Use realistic currencies: USD, EUR, GBP, JPY, CAD
@@ -212,41 +216,37 @@ def _get_domain_guidance(domain_hint: str) -> str:
 def order_test_cases(cases: list) -> list:
     """
     Order test cases logically: CREATE → READ → UPDATE → DELETE
-    
+
     Args:
         cases: List of test cases
-        
+
     Returns:
         Ordered list of test cases
     """
     # Define operation priorities
     operation_priority = {
-        "POST": 1,    # CREATE
-        "GET": 2,     # READ
-        "PUT": 3,     # UPDATE
-        "PATCH": 3,   # UPDATE
-        "DELETE": 4   # DELETE
+        "POST": 1,  # CREATE
+        "GET": 2,  # READ
+        "PUT": 3,  # UPDATE
+        "PATCH": 3,  # UPDATE
+        "DELETE": 4,  # DELETE
     }
-    
+
     # Define test type priorities within each operation
-    test_type_priority = {
-        "valid": 1,
-        "boundary": 2,
-        "negative": 3
-    }
-    
+    test_type_priority = {"valid": 1, "boundary": 2, "negative": 3}
+
     def get_case_priority(case):
         """Calculate priority for a test case"""
         method_priority = operation_priority.get(case.method, 5)
         type_priority = test_type_priority.get(case.test_type, 4)
-        
+
         # Additional ordering within same method/type
         # Prefer cases without path parameters (more general) first
         path_param_priority = 0 if not case.path_params else 1
-        
+
         return (method_priority, type_priority, path_param_priority)
-    
+
     # Sort cases by priority
     ordered_cases = sorted(cases, key=get_case_priority)
-    
+
     return ordered_cases

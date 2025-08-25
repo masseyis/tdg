@@ -1,11 +1,13 @@
 """Anthropic AI provider"""
+
 import json
 import logging
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from app.ai.base import AIProvider, TestCase
 from app.ai.prompts import get_test_generation_prompt, order_test_cases
-from app.utils.json_repair import safe_json_parse, extract_json_from_content
 from app.config import settings
+from app.utils.json_repair import extract_json_from_content, safe_json_parse
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +20,7 @@ class AnthropicProvider(AIProvider):
         if self.is_available():
             try:
                 import anthropic
+
                 self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
             except ImportError:
                 logger.warning("Anthropic library not installed")
@@ -37,15 +40,12 @@ class AnthropicProvider(AIProvider):
         else:
             return "claude-3-sonnet-20240229", 0.3, 2000  # Default to balanced
 
-    async def generate_cases(
-        self,
-        endpoint: Any,
-        options: Dict[str, Any]
-    ) -> List[TestCase]:
+    async def generate_cases(self, endpoint: Any, options: Dict[str, Any]) -> List[TestCase]:
         """Generate test cases using Anthropic"""
         if not self.client:
             # Fallback to null provider
             from app.ai.null_provider import NullProvider
+
             return await NullProvider().generate_cases(endpoint, options)
 
         try:
@@ -54,31 +54,30 @@ class AnthropicProvider(AIProvider):
             # Get model configuration based on speed preference
             speed = options.get("speed", "fast")
             model, temperature, max_tokens = self._get_model_config(speed)
-            
+
             message = self.client.messages.create(
                 model=model,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 system="You are a test data generation expert. Generate test cases as valid JSON with rich, meaningful data.",
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                messages=[{"role": "user", "content": prompt}],
             )
 
             # Extract JSON from response
             content = message.content[0].text
-            
+
             # Use JSON repair utility for robust parsing
             data = safe_json_parse(content)
             if not data:
                 logger.warning("Anthropic returned invalid JSON, attempting extraction...")
                 # Try to extract and repair JSON from the response
                 data = extract_json_from_content(content)
-                
+
             if not data:
                 logger.error("Failed to extract valid JSON from Anthropic response")
                 # Fallback to null provider
                 from app.ai.null_provider import NullProvider
+
                 return await NullProvider().generate_cases(endpoint, options)
 
             # Parse response into TestCase objects
@@ -95,7 +94,7 @@ class AnthropicProvider(AIProvider):
                     body=case_data.get("body"),
                     expected_status=case_data.get("expected_status", 200),
                     expected_response=case_data.get("expected_response"),
-                    test_type=case_data.get("test_type", "valid")
+                    test_type=case_data.get("test_type", "valid"),
                 )
                 cases.append(case)
 
@@ -108,4 +107,5 @@ class AnthropicProvider(AIProvider):
             logger.error(f"Anthropic generation failed: {e}")
             # Fallback to null provider
             from app.ai.null_provider import NullProvider
+
             return await NullProvider().generate_cases(endpoint, options)

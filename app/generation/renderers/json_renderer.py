@@ -1,6 +1,6 @@
 """JSON renderer for test data"""
 
-from typing import List, Any, Dict
+from typing import Any, Dict, List
 
 
 def render(cases: List[Any]) -> List[Dict[str, Any]]:
@@ -24,7 +24,7 @@ def render(cases: List[Any]) -> List[Dict[str, Any]]:
             "body": case.body,
             "expectedStatus": case.expected_status,
             "expectedResponse": case.expected_response,
-            "testType": case.test_type
+            "testType": case.test_type,
         }
         result.append(case_dict)
 

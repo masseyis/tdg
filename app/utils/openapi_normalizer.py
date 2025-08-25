@@ -1,33 +1,36 @@
 import logging
-from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class AuthType(Enum):
     """Authentication types"""
+
     NONE = "none"
     BEARER = "bearer"
     BASIC = "basic"
     API_KEY = "apiKey"
     OAUTH2 = "oauth2"
 
-@dataclass
 
+@dataclass
 class Parameter:
     """API parameter"""
+
     name: str
     location: str  # path, query, header, cookie
     required: bool = False
     schema: Dict[str, Any] = field(default_factory=dict)
     description: Optional[str] = None
 
-@dataclass
 
+@dataclass
 class Endpoint:
     """Normalized endpoint"""
+
     path: str
     method: str
     operation_id: Optional[str] = None
@@ -39,10 +42,11 @@ class Endpoint:
     responses: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     tags: List[str] = field(default_factory=list)
 
-@dataclass
 
+@dataclass
 class NormalizedAPI:
     """Normalized OpenAPI specification"""
+
     title: str
     version: str
     description: Optional[str] = None
@@ -64,27 +68,27 @@ def normalize_openapi(spec: Dict[str, Any]) -> NormalizedAPI:
     # Add debug logging
     logger.debug(f"Normalizing OpenAPI spec: {type(spec)}")
     logger.debug(f"Spec keys: {list(spec.keys()) if isinstance(spec, dict) else 'Not a dict'}")
-    
+
     # Ensure spec is a dict
     if not isinstance(spec, dict):
         logger.error(f"Expected dict for OpenAPI spec, got {type(spec)}: {spec}")
         raise ValueError(f"OpenAPI spec must be a dict, got {type(spec)}")
-    
+
     # Extract basic info
     info = spec.get("info", {})
     logger.debug(f"Info section: {info}")
-    
+
     # Ensure info is a dict
     if not isinstance(info, dict):
         logger.error(f"Expected dict for info section, got {type(info)}: {info}")
         raise ValueError(f"Info section must be a dict, got {type(info)}")
-    
+
     normalized = NormalizedAPI(
         title=info.get("title", "API"),
         version=info.get("version", "1.0.0"),
         description=info.get("description"),
         servers=[s.get("url") for s in spec.get("servers", []) if isinstance(s, dict)],
-        components=spec.get("components", {})
+        components=spec.get("components", {}),
     )
 
     # Parse paths
@@ -92,7 +96,7 @@ def normalize_openapi(spec: Dict[str, Any]) -> NormalizedAPI:
     if not isinstance(paths, dict):
         logger.error(f"Expected dict for paths, got {type(paths)}: {paths}")
         raise ValueError(f"Paths section must be a dict, got {type(paths)}")
-    
+
     for path, path_item in paths.items():
         # Handle path-level parameters
         path_params = path_item.get("parameters", []) if isinstance(path_item, dict) else []
@@ -112,7 +116,7 @@ def normalize_openapi(spec: Dict[str, Any]) -> NormalizedAPI:
                 operation_id=operation.get("operationId"),
                 summary=operation.get("summary"),
                 description=operation.get("description"),
-                tags=operation.get("tags", [])
+                tags=operation.get("tags", []),
             )
 
             # Parse parameters
@@ -120,18 +124,20 @@ def normalize_openapi(spec: Dict[str, Any]) -> NormalizedAPI:
             for param in all_params:
                 if not isinstance(param, dict):
                     continue
-                    
+
                 # Handle $ref
                 if "$ref" in param:
                     param = resolve_ref(spec, param["$ref"])
 
-                endpoint.parameters.append(Parameter(
-                    name=param.get("name"),
-                    location=param.get("in"),
-                    required=param.get("required", False),
-                    schema=param.get("schema", {}),
-                    description=param.get("description")
-                ))
+                endpoint.parameters.append(
+                    Parameter(
+                        name=param.get("name"),
+                        location=param.get("in"),
+                        required=param.get("required", False),
+                        schema=param.get("schema", {}),
+                        description=param.get("description"),
+                    )
+                )
 
             # Parse request body
             if "requestBody" in operation:

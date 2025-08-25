@@ -1,6 +1,7 @@
 """SQL renderer for test data"""
+
 import json
-from typing import List, Any
+from typing import Any, List
 
 
 def render(cases: List[Any], table_name: str = "test_data") -> str:

@@ -1,11 +1,13 @@
 """OpenAI provider for test case generation"""
+
 import json
 import logging
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from app.ai.base import AIProvider, TestCase
 from app.ai.prompts import get_test_generation_prompt, order_test_cases
-from app.utils.json_repair import safe_json_parse, extract_json_from_content
 from app.config import settings
+from app.utils.json_repair import extract_json_from_content, safe_json_parse
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +20,7 @@ class OpenAIProvider(AIProvider):
         if self.is_available():
             try:
                 import openai
+
                 self.client = openai.OpenAI(api_key=settings.openai_api_key)
             except ImportError:
                 logger.warning("OpenAI library not installed")
@@ -39,15 +42,12 @@ class OpenAIProvider(AIProvider):
         else:
             return settings.openai_model, settings.ai_temperature, settings.ai_max_tokens
 
-    async def generate_cases(
-        self,
-        endpoint: Any,
-        options: Dict[str, Any]
-    ) -> List[TestCase]:
+    async def generate_cases(self, endpoint: Any, options: Dict[str, Any]) -> List[TestCase]:
         """Generate test cases using OpenAI"""
         if not self.client:
             # Fallback to null provider
             from app.ai.null_provider import NullProvider
+
             return await NullProvider().generate_cases(endpoint, options)
 
         try:
@@ -56,33 +56,37 @@ class OpenAIProvider(AIProvider):
             # Get model configuration based on speed preference and endpoint type
             speed = options.get("speed", "fast")
             model, temperature, max_tokens = self._get_model_config(speed, endpoint)
-            
+
             response = self.client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "You are a test data generation expert. "
-                                                  "Generate test cases as valid JSON."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are a test data generation expert. "
+                        "Generate test cases as valid JSON.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=temperature,
                 max_tokens=max_tokens,
                 response_format={"type": "json_object"},
-                timeout=settings.ai_timeout
+                timeout=settings.ai_timeout,
             )
 
             content = response.choices[0].message.content
-            
+
             # Use JSON repair utility for robust parsing
             data = safe_json_parse(content)
             if not data:
                 logger.warning("OpenAI returned invalid JSON, attempting extraction...")
                 # Try to extract and repair JSON from the response
                 data = extract_json_from_content(content)
-                
+
             if not data:
                 logger.error("Failed to extract valid JSON from OpenAI response")
                 # Fallback to null provider
                 from app.ai.null_provider import NullProvider
+
                 return await NullProvider().generate_cases(endpoint, options)
 
             # Parse response into TestCase objects
@@ -99,7 +103,7 @@ class OpenAIProvider(AIProvider):
                     body=case_data.get("body"),
                     expected_status=case_data.get("expected_status", 200),
                     expected_response=case_data.get("expected_response"),
-                    test_type=case_data.get("test_type", "valid")
+                    test_type=case_data.get("test_type", "valid"),
                 )
                 cases.append(case)
 
@@ -112,4 +116,5 @@ class OpenAIProvider(AIProvider):
             logger.error(f"OpenAI generation failed: {e}")
             # Fallback to null provider
             from app.ai.null_provider import NullProvider
+
             return await NullProvider().generate_cases(endpoint, options)

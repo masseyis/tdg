@@ -1,7 +1,8 @@
 """CSV renderer for test data"""
+
 import csv
 import io
-from typing import List, Any
+from typing import Any, List
 
 
 def render(cases: List[Any]) -> str:
@@ -46,7 +47,7 @@ def render(cases: List[Any]) -> str:
             "method": case.method,
             "path": case.path,
             "expected_status": case.expected_status,
-            "test_type": case.test_type
+            "test_type": case.test_type,
         }
 
         # Add body fields

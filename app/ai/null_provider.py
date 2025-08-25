@@ -1,27 +1,26 @@
 """Null AI provider - uses faker and heuristics only"""
+
 import random
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from app.ai.base import AIProvider, TestCase
-from app.utils.faker_utils import (
-    generate_for_schema,
-    generate_boundary_value,
-    generate_negative_value,
-    set_seed
-)
 from app.ai.prompts import order_test_cases
+from app.utils.faker_utils import (
+    generate_boundary_value,
+    generate_for_schema,
+    generate_negative_value,
+    set_seed,
+)
 
 
 class NullProvider(AIProvider):
     """Null provider using faker and heuristics"""
+
     def is_available(self) -> bool:
         """Always available"""
         return True
 
-    async def generate_cases(
-        self,
-        endpoint: Any,
-        options: Dict[str, Any]
-    ) -> List[TestCase]:
+    async def generate_cases(self, endpoint: Any, options: Dict[str, Any]) -> List[TestCase]:
         """Generate test cases using faker and heuristics"""
         cases = []
         count = options.get("count", 10)
@@ -60,9 +59,8 @@ class NullProvider(AIProvider):
         ordered_cases = order_test_cases(cases)
 
         return ordered_cases
-    def _generate_valid_case(
-        self, endpoint: Any, domain_hint: str, index: int
-    ) -> TestCase:
+
+    def _generate_valid_case(self, endpoint: Any, domain_hint: str, index: int) -> TestCase:
         """Generate a valid test case"""
         # Generate path params
         path_params = {}
@@ -74,17 +72,13 @@ class NullProvider(AIProvider):
         query_params = {}
         for param in endpoint.parameters:
             if param.location == "query" and (param.required or random.random() > 0.5):
-                query_params[param.name] = self._generate_param_value(
-                    param, domain_hint
-                )
+                query_params[param.name] = self._generate_param_value(param, domain_hint)
 
         # Generate headers
         headers = {"Content-Type": "application/json"}
         for param in endpoint.parameters:
             if param.location == "header" and (param.required or random.random() > 0.5):
-                headers[param.name] = str(
-                    self._generate_param_value(param, domain_hint)
-                )
+                headers[param.name] = str(self._generate_param_value(param, domain_hint))
 
         # Generate body
         body = None
@@ -101,23 +95,17 @@ class NullProvider(AIProvider):
             path_params=path_params,
             body=body,
             expected_status=(
-                200 if endpoint.method == "GET"
-                else 201 if endpoint.method == "POST"
-                else 200
+                200 if endpoint.method == "GET" else 201 if endpoint.method == "POST" else 200
             ),
             expected_response=None,
-            test_type="valid"
+            test_type="valid",
         )
 
-    def _generate_boundary_case(
-        self, endpoint: Any, domain_hint: str, index: int
-    ) -> TestCase:
+    def _generate_boundary_case(self, endpoint: Any, domain_hint: str, index: int) -> TestCase:
         """Generate a boundary test case"""
         base_case = self._generate_valid_case(endpoint, domain_hint, index)
         base_case.name = f"Boundary_{endpoint.operation_id or endpoint.method}_{index}"
-        base_case.description = (
-            f"Boundary test case for {endpoint.method} {endpoint.path}"
-        )
+        base_case.description = f"Boundary test case for {endpoint.method} {endpoint.path}"
         base_case.test_type = "boundary"
 
         # Modify body with boundary values
@@ -126,15 +114,11 @@ class NullProvider(AIProvider):
 
         return base_case
 
-    def _generate_negative_case(
-        self, endpoint: Any, domain_hint: str, index: int
-    ) -> TestCase:
+    def _generate_negative_case(self, endpoint: Any, domain_hint: str, index: int) -> TestCase:
         """Generate a negative test case"""
         base_case = self._generate_valid_case(endpoint, domain_hint, index)
         base_case.name = f"Negative_{endpoint.operation_id or endpoint.method}_{index}"
-        base_case.description = (
-            f"Negative test case for {endpoint.method} {endpoint.path}"
-        )
+        base_case.description = f"Negative test case for {endpoint.method} {endpoint.path}"
         base_case.test_type = "negative"
 
         # Choose negative scenario

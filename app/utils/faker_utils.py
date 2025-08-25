@@ -1,9 +1,11 @@
 """Faker utilities for data generation"""
+
 import random
 from typing import Any, Dict, List, Optional
+
 from faker import Faker
 
-  #  Initialize faker
+#  Initialize faker
 fake = Faker()
 
 
@@ -93,27 +95,52 @@ def generate_string(schema: Dict[str, Any], domain_hint: Optional[str] = None) -
     # Use domain hint for realistic data
     if domain_hint:
         domain_hint_lower = domain_hint.lower()
-        
+
         # Pet store domain
         if "pet" in domain_hint_lower:
             if "name" in schema.get("description", "").lower():
-                return random.choice(["Buddy", "Luna", "Max", "Bella", "Charlie", "Daisy", "Rocky", "Lucy", "Cooper", "Molly"])
+                return random.choice(
+                    [
+                        "Buddy",
+                        "Luna",
+                        "Max",
+                        "Bella",
+                        "Charlie",
+                        "Daisy",
+                        "Rocky",
+                        "Lucy",
+                        "Cooper",
+                        "Molly",
+                    ]
+                )
             elif "category" in schema.get("description", "").lower():
                 return random.choice(["Dogs", "Cats", "Birds", "Fish", "Reptiles"])
             elif "status" in schema.get("description", "").lower():
                 return random.choice(["available", "pending", "sold"])
             elif "tag" in schema.get("description", "").lower():
-                return random.choice(["friendly", "trained", "hypoallergenic", "purebred", "young", "senior"])
-        
+                return random.choice(
+                    ["friendly", "trained", "hypoallergenic", "purebred", "young", "senior"]
+                )
+
         # E-commerce domain
         elif "ecommerce" in domain_hint_lower or "shop" in domain_hint_lower:
             if "name" in schema.get("description", "").lower():
-                return random.choice(["iPhone 15 Pro", "Nike Air Max", "Samsung TV", "MacBook Pro", "Sony Headphones"])
+                return random.choice(
+                    [
+                        "iPhone 15 Pro",
+                        "Nike Air Max",
+                        "Samsung TV",
+                        "MacBook Pro",
+                        "Sony Headphones",
+                    ]
+                )
             elif "category" in schema.get("description", "").lower():
-                return random.choice(["Electronics", "Clothing", "Home & Garden", "Sports", "Books"])
+                return random.choice(
+                    ["Electronics", "Clothing", "Home & Garden", "Sports", "Books"]
+                )
             elif "price" in schema.get("description", "").lower():
                 return round(random.uniform(10.0, 999.99), 2)
-        
+
         # User management domain
         elif "user" in domain_hint_lower or "auth" in domain_hint_lower:
             if "name" in schema.get("description", "").lower():
@@ -124,14 +151,17 @@ def generate_string(schema: Dict[str, Any], domain_hint: Optional[str] = None) -
                 return fake.phone_number()
             elif "username" in schema.get("description", "").lower():
                 return fake.user_name()
-        
+
         # Financial domain
         elif "financial" in domain_hint_lower or "bank" in domain_hint_lower:
-            if "amount" in schema.get("description", "").lower() or "price" in schema.get("description", "").lower():
+            if (
+                "amount" in schema.get("description", "").lower()
+                or "price" in schema.get("description", "").lower()
+            ):
                 return round(random.uniform(1.0, 10000.0), 2)
             elif "currency" in schema.get("description", "").lower():
                 return random.choice(["USD", "EUR", "GBP", "JPY", "CAD"])
-        
+
         # General fallback
         else:
             if "name" in schema.get("description", "").lower():
@@ -292,7 +322,7 @@ def generate_negative_value(schema: Dict[str, Any]) -> Any:
         "integer": 3.14,
         "boolean": "yes",
         "array": "not_an_array",
-        "object": "not_an_object"
+        "object": "not_an_object",
     }
 
     if random.random() > 0.5 and schema_type in type_mismatches:

@@ -1,12 +1,15 @@
 """Load OpenAPI specs from various sources"""
+
 import base64
 import json
 import logging
-from typing import Dict, Any
-import yaml
+from typing import Any, Dict
+
 import httpx
+import yaml
 
 logger = logging.getLogger(__name__)
+
 
 async def load_openapi_spec(source: str) -> Dict[str, Any]:
     """
@@ -35,6 +38,7 @@ async def load_openapi_spec(source: str) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Failed to load OpenAPI spec: {e}")
         raise ValueError(f"Invalid OpenAPI source: {e}")
+
 
 async def load_from_url(url: str) -> Dict[str, Any]:
     """Load OpenAPI spec from URL"""

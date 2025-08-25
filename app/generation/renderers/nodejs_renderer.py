@@ -9,24 +9,24 @@ from typing import Any, Dict, List
 def render(cases: List[Any], api: Any, flows: List[Any] = None) -> Dict[str, str]:
     """
     Render Node.js test files using shared JSON test data
-    
+
     Returns:
         Dictionary of filename -> content
     """
     files = {}
-    
+
     # Generate shared test data JSON file
     files["test-data.json"] = _generate_test_data_json(cases)
-    
+
     # Generate main Node.js test runner
     files["test_api.js"] = _generate_test_runner(cases, api)
-    
+
     # Generate package.json
     files["package.json"] = _generate_package_json()
-    
+
     # Generate README
     files["README.md"] = _generate_readme(api)
-    
+
     return files
 
 
@@ -37,11 +37,11 @@ def _generate_test_data_json(cases: List[Any]) -> str:
             "generated_at": "2024-01-01T00:00:00Z",
             "generator": "Test Data Generator MVP",
             "version": "1.0.0",
-            "total_cases": len(cases)
+            "total_cases": len(cases),
         },
-        "test_cases": []
+        "test_cases": [],
     }
-    
+
     for case in cases:
         test_case = {
             "id": case.name,
@@ -55,16 +55,16 @@ def _generate_test_data_json(cases: List[Any]) -> str:
             "body": case.body,
             "expected_status": case.expected_status,
             "expected_response": case.expected_response,
-            "test_type": case.test_type
+            "test_type": case.test_type,
         }
         test_data["test_cases"].append(test_case)
-    
+
     return json.dumps(test_data, indent=2)
 
 
 def _generate_test_runner(cases: List[Any], api: Any) -> str:
     """Generate Node.js test runner"""
-    return f'''#!/usr/bin/env node
+    return f"""#!/usr/bin/env node
 /**
  * Node.js API Test Runner
  * Generated from: {api.title or "API Specification"}
@@ -298,7 +298,7 @@ if (require.main === module) {{
         process.exit(1);
     }});
 }}
-'''
+"""
 
 
 def _generate_package_json() -> str:

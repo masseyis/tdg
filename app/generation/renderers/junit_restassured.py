@@ -1,6 +1,7 @@
 """JUnit + REST Assured test renderer"""
+
 import json
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 
 def render(cases: List[Any], api: Any, flows: List[Any] = None) -> Dict[str, str]:
@@ -24,12 +25,14 @@ def render(cases: List[Any], api: Any, flows: List[Any] = None) -> Dict[str, str
     files["pom.xml"] = _generate_pom_xml(api)
     files[".gitignore"] = _generate_gitignore()
     files["README.md"] = _generate_readme(api)
-    
+
     # Generate shared test data JSON file
     files["src/test/resources/test-data.json"] = _generate_test_data_json(cases)
 
     # Generate comprehensive test flow
-    files["src/test/java/generated/ComprehensiveTestFlow.java"] = _generate_comprehensive_test_flow(api)
+    files["src/test/java/generated/ComprehensiveTestFlow.java"] = _generate_comprehensive_test_flow(
+        api
+    )
 
     # Generate OAuth2 test flow
     files["src/test/java/generated/OAuth2TestFlow.java"] = _generate_oauth2_test_flow(api)
@@ -178,11 +181,11 @@ def _generate_test_data_json(cases: List[Any]) -> str:
             "generated_at": "2024-01-01T00:00:00Z",
             "generator": "Test Data Generator MVP",
             "version": "1.0.0",
-            "total_cases": len(cases)
+            "total_cases": len(cases),
         },
-        "test_cases": []
+        "test_cases": [],
     }
-    
+
     for case in cases:
         test_case = {
             "id": case.name,
@@ -196,10 +199,10 @@ def _generate_test_data_json(cases: List[Any]) -> str:
             "body": case.body,
             "expected_status": case.expected_status,
             "expected_response": case.expected_response,
-            "test_type": case.test_type
+            "test_type": case.test_type,
         }
         test_data["test_cases"].append(test_case)
-    
+
     return json.dumps(test_data, indent=2)
 
 
