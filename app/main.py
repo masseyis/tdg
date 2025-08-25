@@ -86,6 +86,7 @@ from app.utils.openapi_loader import load_openapi_spec
 from app.utils.openapi_normalizer import normalize_openapi
 from app.utils.zipping import create_artifact_zip
 from app.websocket_manager import websocket_manager
+from app.sentry import init_sentry, capture_exception, set_tag
 
 request_semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
 
@@ -96,6 +97,9 @@ request_semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
 # Configure logging
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
+
+# Initialize Sentry for error tracking and monitoring
+init_sentry()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -118,13 +122,21 @@ async def index(request: Request):
 @app.get("/app", response_class=HTMLResponse)
 async def app_page(request: Request):
     """Render app page"""
-    return templates.TemplateResponse("app.html", {"request": request})
+    return templates.TemplateResponse("app.html", {
+        "request": request,
+        "sentry_dsn": settings.sentry_dsn,
+        "sentry_environment": settings.sentry_environment,
+    })
 
 
 @app.post("/app", response_class=HTMLResponse)
 async def app_page_post(request: Request):
     """Handle form submission from app page"""
-    return templates.TemplateResponse("app.html", {"request": request})
+    return templates.TemplateResponse("app.html", {
+        "request": request,
+        "sentry_dsn": settings.sentry_dsn,
+        "sentry_environment": settings.sentry_environment,
+    })
 
 
 @app.get("/health")
@@ -311,7 +323,15 @@ async def generate(request: GenerateRequest, background_tasks: BackgroundTasks =
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=e.errors())
     except Exception as e:
-        logger.error(f"Generation error: {e}")
+        logger.error(f"API generation error: {e}")
+        # Capture error in Sentry with context
+        capture_exception(e, {
+            "endpoint": "api-generate",
+            "use_background": getattr(request, "use_background", False),
+            "cases_per_endpoint": request.casesPerEndpoint,
+            "outputs": request.outputs,
+            "ai_speed": request.aiSpeed,
+        })
         raise HTTPException(status_code=500, detail=str(e))
 
 

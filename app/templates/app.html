@@ -5,6 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpecMint - Generate Test Cases</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Sentry JavaScript SDK -->
+    {% if sentry_dsn %}
+    <script
+        src="https://browser.sentry-cdn.com/7.101.1/bundle.min.js"
+        integrity="sha384-6rKXz8J+QvKvzH7mjcYDXtXJ8iz+eTjvQj4YwPz6nJ6y7S7zQj5zQj5zQj5zQj5zQ"
+        crossorigin="anonymous"
+    ></script>
+    <script>
+        Sentry.init({
+            dsn: "{{ sentry_dsn }}",
+            environment: "{{ sentry_environment }}",
+            release: "tdg-mvp@{{ sentry_environment }}",
+            tracesSampleRate: 0.1,
+            profilesSampleRate: 0.1,
+            integrations: [
+                Sentry.browserTracingIntegration(),
+                Sentry.replayIntegration({
+                    maskAllText: false,
+                    blockAllMedia: false,
+                }),
+            ],
+            beforeSend(event, hint) {
+                // Filter out certain errors
+                if (hint.originalException) {
+                    const errorType = hint.originalException.name || hint.originalException.constructor.name;
+                    if (['ValidationError', 'TypeError'].includes(errorType)) {
+                        return null;
+                    }
+                }
+                return event;
+            },
+        });
+    </script>
+    {% endif %}
+    
     <script>
         // Global error handler to capture JavaScript errors
         window.jsErrors = [];
@@ -17,6 +53,11 @@
                 error: e.error ? e.error.stack : 'No stack trace'
             });
             console.error('JavaScript error captured:', e);
+            
+            // Send to Sentry if available
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(e.error || e);
+            }
         });
         
         // Capture unhandled promise rejections
@@ -26,6 +67,11 @@
                 reason: e.reason
             });
             console.error('Unhandled promise rejection:', e.reason);
+            
+            // Send to Sentry if available
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(e.reason);
+            }
         });
         
         tailwind.config = {

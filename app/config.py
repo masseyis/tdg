@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     ai_concurrency_limit: int = 8  # Maximum concurrent AI requests
     max_concurrent_requests: int = 30  # Maximum concurrent HTTP requests
 
+    # Sentry settings
+    sentry_dsn: Optional[str] = None
+    sentry_environment: str = "development"
+    sentry_traces_sample_rate: float = 0.1
+    sentry_profiles_sample_rate: float = 0.1
+
     class Config:
         env_file = ".env"
         case_sensitive = False

@@ -15,6 +15,7 @@ anthropic>=0.64.0
 psutil>=7.0.0
 selenium>=4.35.0
 webdriver-manager>=4.0.2
+sentry-sdk[fastapi]>=2.0.0
 
 # Development and testing dependencies
 pytest>=8.4.0
