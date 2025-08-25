@@ -989,7 +989,7 @@ def test_complete_user_experience_with_ai():
         logger.info("✅ Spec file uploaded successfully")
         
         # Use fewer cases for AI testing to avoid timeouts
-        if not ui_driver.set_test_parameters(cases_per_endpoint=2, domain_hint="petstore"):
+        if not ui_driver.set_test_parameters(cases_per_endpoint=5, domain_hint="petstore"):
             raise AssertionError("Failed to set test parameters")
         logger.info("✅ Test parameters set successfully")
         
