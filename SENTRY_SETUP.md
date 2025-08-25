@@ -71,6 +71,21 @@ set_tag("user_type", "premium")
 set_tag("feature", "bulk_upload")
 ```
 
+### Testing Sentry Integration
+
+To test that Sentry is working correctly, use the test endpoint:
+
+```bash
+# Test Sentry error capture
+curl http://localhost:8000/sentry-debug
+```
+
+This endpoint:
+- Intentionally triggers a division by zero error
+- Captures the error in Sentry with context
+- Returns a 500 error with message "Sentry test error triggered successfully"
+- Useful for verifying Sentry integration is working correctly
+
 ## Frontend Integration
 
 ### Automatic Error Capture
