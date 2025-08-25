@@ -11,6 +11,15 @@
    - Tests: File upload → Generation → Download → Test execution
    - Must pass on every push and before deployment
    - Runs locally with full browser automation
+   - Uses null provider (no real AI calls) for fast, reliable testing
+
+2. **AI Integration E2E Test** (`test_complete_user_experience_with_ai`) - **CRITICAL**
+   - Validates AI integration with real OpenAI API calls
+   - Tests: File upload → AI Generation → Download → Test execution
+   - Only runs when `OPENAI_API_KEY` is set
+   - Catches AI integration issues: OpenAI API failures, JSON parsing problems
+   - Uses 10-minute timeout for AI operations
+   - Critical for catching deployment issues that null provider test misses
 
 2. **Post-Deploy Test** (`test_deployed_service_complete_user_experience`) - **CRITICAL**
    - Reuses the same code as the e2e test but runs against the live deployed site
@@ -77,6 +86,9 @@ Deploy to Fly.io → Post-deployment validation
 - **Scope**: Complete user journey
 - **Purpose**: Validate the entire application works
 - **Environment**: Local with browser automation
+- **Types**:
+  - **Null Provider**: Fast, reliable testing without AI calls
+  - **AI Integration**: Real OpenAI API testing (requires `OPENAI_API_KEY`)
 
 ### Post-Deploy Tests
 - **Scope**: Live deployed service
