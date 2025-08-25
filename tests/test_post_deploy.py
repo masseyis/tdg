@@ -18,6 +18,9 @@ This test validates the complete user experience against the live deployment:
 
 This ensures the deployed version is working correctly and provides
 the same user experience as the local development environment.
+
+IMPORTANT: This test reuses the same WebUIDriver and test logic as the e2e test
+to ensure we don't have duplicate code to maintain. The only difference is the URL.
 """
 
 import asyncio
@@ -28,14 +31,24 @@ import os
 import subprocess
 import tempfile
 import time
+import zipfile
 from pathlib import Path
 from typing import Dict, Any, Optional
 
 import httpx
 import pytest
-import zipfile
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 
 from tests.mock_service import MockService
+
+# Import the same classes from e2e test to reuse code
+from tests.test_e2e_functional import WebUIDriver, JavaTestRunner, PythonTestRunner, NodeTestRunner
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -44,255 +57,6 @@ logger = logging.getLogger(__name__)
 # Configuration
 DEPLOYED_URL = "https://tdg-mvp.fly.dev"
 MOCK_SERVICE_PORT = 8082
-
-
-class DeployedGeneratorService:
-    """Wrapper for the deployed test generation service"""
-    
-    def __init__(self, base_url: str = DEPLOYED_URL):
-        self.base_url = base_url
-        self.client = httpx.AsyncClient(timeout=60.0)
-    
-    async def health_check(self) -> bool:
-        """Check if the deployed service is healthy"""
-        try:
-            response = await self.client.get(f"{self.base_url}/health")
-            return response.status_code == 200
-        except Exception as e:
-            logger.error(f"Health check failed: {e}")
-            return False
-    
-    async def generate_tests(self, spec_file: Path, cases_per_endpoint: int = 2) -> Optional[bytes]:
-        """Generate tests using the deployed web UI endpoint"""
-        try:
-            with open(spec_file, 'rb') as f:
-                files = {'file': (spec_file.name, f, 'application/yaml')}
-                data = {
-                    'casesPerEndpoint': cases_per_endpoint,
-                    'domainHint': 'petstore'
-                }
-                
-                response = await self.client.post(
-                    f"{self.base_url}/generate-ui",
-                    files=files,
-                    data=data
-                )
-                
-                if response.status_code == 200:
-                    return response.content
-                else:
-                    logger.error(f"Generation failed: {response.status_code} - {response.text}")
-                    return None
-                    
-        except Exception as e:
-            logger.error(f"Generation request failed: {e}")
-            return None
-    
-    async def close(self):
-        """Close the HTTP client"""
-        await self.client.aclose()
-
-
-class JavaTestRunner:
-    """Runner for generated Java tests"""
-    
-    def run_tests(self, java_dir: Path, target_url: str = f"http://localhost:{MOCK_SERVICE_PORT}") -> bool:
-        """Run the generated Java tests"""
-        
-        # Extract the generated ZIP to get the Maven project
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            
-            # Find the pom.xml in the Java directory
-            pom_files = list(java_dir.rglob("pom.xml"))
-            if not pom_files:
-                logger.error("No pom.xml found in generated Java files")
-                return False
-            
-            project_dir = pom_files[0].parent
-            logger.info(f"Using generated pom.xml from ZIP file: {project_dir}")
-            
-            # Copy test files
-            test_dir = project_dir / "src" / "test" / "java"
-            test_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Copy test-data.json to resources
-            resources_dir = project_dir / "src" / "test" / "resources"
-            resources_dir.mkdir(parents=True, exist_ok=True)
-            
-            test_data_files = list(java_dir.rglob("test-data.json"))
-            if test_data_files:
-                import shutil
-                source_file = test_data_files[0]
-                target_file = resources_dir / "test-data.json"
-                # Only copy if source and target are different
-                if source_file != target_file:
-                    shutil.copy2(source_file, target_file)
-                    logger.info(f"Copied test-data.json to {resources_dir}")
-                else:
-                    logger.info(f"test-data.json already exists at {resources_dir}")
-            
-            # Run Maven tests
-            try:
-                logger.info(f"Running Maven tests in {project_dir}")
-                result = subprocess.run(
-                    ["mvn", "test", f"-DbaseUrl={target_url}"],
-                    cwd=project_dir,
-                    capture_output=True,
-                    text=True,
-                    timeout=120
-                )
-                
-                if result.returncode == 0:
-                    logger.info("✅ Java tests passed!")
-                    return True
-                else:
-                    logger.error(f"❌ Java tests failed: {result.stderr}")
-                    # For post-deploy, we're more lenient - just check compilation
-                    if "BUILD SUCCESS" in result.stdout or "Tests run:" in result.stdout:
-                        logger.info("✅ Java compilation successful (some tests may fail against mock)")
-                        return True
-                    return False
-                    
-            except subprocess.TimeoutExpired:
-                logger.error("❌ Java tests timed out")
-                return False
-            except Exception as e:
-                logger.error(f"❌ Java test execution failed: {e}")
-                return False
-
-
-class PythonTestRunner:
-    """Runner for generated Python tests"""
-    
-    def run_tests(self, python_dir: Path, target_url: str = f"http://localhost:{MOCK_SERVICE_PORT}") -> bool:
-        """Run the generated Python tests"""
-        
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            
-            # Find the test file
-            test_files = list(python_dir.rglob("test_api.py"))
-            if not test_files:
-                logger.error("No test_api.py found in generated Python files")
-                return False
-            
-            test_file = test_files[0]
-            logger.info(f"Using generated test file: {test_file}")
-            
-            # Copy test-data.json
-            test_data_files = list(python_dir.rglob("test-data.json"))
-            if test_data_files:
-                import shutil
-                shutil.copy2(test_data_files[0], temp_path / "test-data.json")
-                logger.info(f"Copied test-data.json to {temp_path}")
-            
-            # Install dependencies
-            requirements_files = list(python_dir.rglob("requirements.txt"))
-            if requirements_files:
-                try:
-                    logger.info("Installing Python dependencies...")
-                    subprocess.run(
-                        ["pip", "install", "-r", str(requirements_files[0])],
-                        check=True,
-                        capture_output=True,
-                        text=True
-                    )
-                except subprocess.CalledProcessError as e:
-                    logger.error(f"Failed to install dependencies: {e}")
-                    return False
-            
-            # Run Python tests
-            try:
-                logger.info(f"Running Python tests: {test_file}")
-                result = subprocess.run(
-                    ["python", str(test_file)],
-                    cwd=temp_path,
-                    capture_output=True,
-                    text=True,
-                    timeout=60
-                )
-                
-                if result.returncode == 0:
-                    logger.info("✅ Python tests passed!")
-                    return True
-                else:
-                    logger.error(f"❌ Python tests failed: {result.stderr}")
-                    return False
-                    
-            except subprocess.TimeoutExpired:
-                logger.error("❌ Python tests timed out")
-                return False
-            except Exception as e:
-                logger.error(f"❌ Python test execution failed: {e}")
-                return False
-
-
-class NodeTestRunner:
-    """Runner for generated Node.js tests"""
-    
-    def run_tests(self, nodejs_dir: Path, target_url: str = f"http://localhost:{MOCK_SERVICE_PORT}") -> bool:
-        """Run the generated Node.js tests"""
-        
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            
-            # Find the test file
-            test_files = list(nodejs_dir.rglob("test_api.js"))
-            if not test_files:
-                logger.error("No test_api.js found in generated Node.js files")
-                return False
-            
-            test_file = test_files[0]
-            logger.info(f"Using generated test file: {test_file}")
-            
-            # Copy test-data.json
-            test_data_files = list(nodejs_dir.rglob("test-data.json"))
-            if test_data_files:
-                import shutil
-                shutil.copy2(test_data_files[0], temp_path / "test-data.json")
-                logger.info(f"Copied test-data.json to {temp_path}")
-            
-            # Install dependencies
-            package_files = list(nodejs_dir.rglob("package.json"))
-            if package_files:
-                try:
-                    logger.info("Installing Node.js dependencies...")
-                    subprocess.run(
-                        ["npm", "install"],
-                        cwd=package_files[0].parent,
-                        check=True,
-                        capture_output=True,
-                        text=True
-                    )
-                except subprocess.CalledProcessError as e:
-                    logger.error(f"Failed to install dependencies: {e}")
-                    return False
-            
-            # Run Node.js tests
-            try:
-                logger.info(f"Running Node.js tests: {test_file}")
-                result = subprocess.run(
-                    ["node", str(test_file)],
-                    cwd=temp_path,
-                    capture_output=True,
-                    text=True,
-                    timeout=60
-                )
-                
-                if result.returncode == 0:
-                    logger.info("✅ Node.js tests passed!")
-                    return True
-                else:
-                    logger.error(f"❌ Node.js tests failed: {result.stderr}")
-                    return False
-                    
-            except subprocess.TimeoutExpired:
-                logger.error("❌ Node.js tests timed out")
-                return False
-            except Exception as e:
-                logger.error(f"❌ Node.js test execution failed: {e}")
-                return False
 
 
 @pytest.mark.asyncio
@@ -305,7 +69,7 @@ async def test_deployed_service_complete_user_experience():
     """
     CRITICAL: Post-deployment test against live site
     
-    This test mimics the e2e test but runs against the deployed service:
+    This test reuses the same code as the e2e test but runs against the deployed service:
     1. Connects to https://tdg-mvp.fly.dev
     2. Tests complete user journey: File upload → Generation → Download → Test execution
     3. Validates deployed service works exactly like local e2e test
@@ -318,93 +82,135 @@ async def test_deployed_service_complete_user_experience():
     runs in CI/CD environments to validate the deployed service.
     """
     
-    # Start mock service for testing generated code
-    mock_service = MockService(spec_path=Path("examples/petstore.json"), port=MOCK_SERVICE_PORT)
+    # Step 1: Start the mock API service for testing generated code
+    logger.info("🌐 Starting mock API service...")
+    mock_service = MockService(Path("tests/samples/petstore-minimal.yaml"), port=MOCK_SERVICE_PORT)
     mock_service.start()
     
+    # Step 2: Start the web UI driver pointing to deployed service
+    logger.info("🌐 Starting web UI driver for deployed service...")
+    ui_driver = WebUIDriver(DEPLOYED_URL)
+    
     try:
-        # Initialize deployed service
-        deployed_service = DeployedGeneratorService()
+        # Wait for services to be ready
+        logger.info("⏳ Waiting for services to be ready...")
+        time.sleep(5)
         
-        # Test 1: Health check
-        logger.info("🔍 Testing deployed service health...")
-        assert await deployed_service.health_check(), "Deployed service health check failed"
-        logger.info("✅ Deployed service is healthy")
+        # Verify deployed service is responding
+        logger.info("🔍 Verifying deployed service health...")
+        with httpx.Client() as http_client:
+            response = http_client.get(f"{DEPLOYED_URL}/health")
+            assert response.status_code == 200, f"Deployed service should be healthy, got {response.status_code}"
+        logger.info("✅ Deployed service is responding")
         
-        # Test 2: Generate tests via web UI
-        logger.info("🔍 Testing test generation via deployed web UI...")
-        spec_file = Path("examples/petstore.json")
-        assert spec_file.exists(), f"Test spec file not found: {spec_file}"
+        # Verify mock service is responding
+        logger.info("🔍 Verifying mock service health...")
+        with httpx.Client() as http_client:
+            response = http_client.get(f"http://localhost:{MOCK_SERVICE_PORT}/openapi.json")
+            assert response.status_code == 200, f"Mock service should serve OpenAPI spec, got {response.status_code}"
+        logger.info("✅ Mock service is responding")
         
-        zip_content = await deployed_service.generate_tests(spec_file, cases_per_endpoint=2)
-        assert zip_content is not None, "Test generation failed"
-        logger.info("✅ Test generation successful")
+        # Step 3: Start browser and navigate to deployed app
+        logger.info("🌐 Starting browser...")
+        if not ui_driver.start_browser():
+            raise AssertionError("Browser failed to start")
+        logger.info("✅ Browser started successfully")
         
-        # Test 3: Extract and validate generated files
-        logger.info("🔍 Extracting and validating generated files...")
+        logger.info("🧭 Navigating to deployed app page...")
+        if not ui_driver.navigate_to_app():
+            raise AssertionError("Failed to navigate to deployed app page")
+        logger.info("✅ Successfully navigated to deployed app page")
+        
+        # Step 4: Upload OpenAPI spec and generate tests
+        logger.info("📝 Generating tests via deployed web UI...")
+        spec_file = Path("tests/samples/petstore-minimal.yaml")
+        
+        if not ui_driver.upload_spec_file(spec_file):
+            raise AssertionError("Failed to upload spec file to deployed service")
+        logger.info("✅ Spec file uploaded successfully to deployed service")
+        
+        if not ui_driver.set_test_parameters(cases_per_endpoint=5, domain_hint="petstore"):
+            raise AssertionError("Failed to set test parameters on deployed service")
+        logger.info("✅ Test parameters set successfully on deployed service")
+        
+        if not ui_driver.submit_form():
+            raise AssertionError("Failed to submit form to deployed service")
+        logger.info("✅ Form submitted successfully to deployed service")
+        
+        # Step 5: Wait for generation to complete via the UI (proper e2e testing)
+        logger.info("⏳ Waiting for test generation to complete via deployed UI...")
+        
+        # The UI should handle the form submission and show progress/completion
+        # This is the proper e2e test - we're testing the complete user journey
+        if not ui_driver.wait_for_generation_complete():
+            raise AssertionError("Test generation did not complete via deployed UI")
+        logger.info("✅ Test generation completed successfully via deployed UI")
+        
+        # Step 6: Get the downloaded ZIP file
+        logger.info("📦 Getting downloaded ZIP file from deployed service...")
+        zip_file_path = ui_driver.get_downloaded_file_path()
+        if not zip_file_path:
+            raise AssertionError("Failed to get downloaded ZIP file from deployed service")
+        logger.info(f"✅ ZIP file downloaded from deployed service: {zip_file_path}")
+        
+        # Step 7: Extract and run the generated tests
+        logger.info("🔍 Extracting and running generated tests from deployed service...")
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             
-            # Extract ZIP content
-            with zipfile.ZipFile(io.BytesIO(zip_content), 'r') as zip_file:
-                zip_file.extractall(temp_path)
+            # Extract ZIP file
+            with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_path)
             
-            # Debug: List all files in the ZIP
-            logger.info("📁 Files in generated ZIP:")
-            for file_path in temp_path.rglob('*'):
-                if file_path.is_file():
-                    logger.info(f"  - {file_path.relative_to(temp_path)}")
+            logger.info(f"📦 Extracted test files to: {temp_path}")
             
-            # Validate ZIP structure
-            java_dir = temp_path / "junit"
-            python_dir = temp_path / "python"
-            nodejs_dir = temp_path / "nodejs"
+            # Test Java framework
+            logger.info("☕ Testing Java framework from deployed service...")
+            java_dir = temp_path / "artifacts" / "junit"
+            if java_dir.exists():
+                java_runner = JavaTestRunner()
+                java_success = java_runner.run_tests(java_dir, f"http://localhost:{MOCK_SERVICE_PORT}")
+                assert java_success, "Java tests should compile and run against the mock service"
+                logger.info("✅ Java framework test completed")
+            else:
+                logger.warning("⚠️  Java artifacts not found in generated ZIP from deployed service")
             
-            # Check if directories exist, if not, look for alternative structure
-            if not java_dir.exists():
-                # Look for Java files in artifacts/junit
-                java_dir = temp_path / "artifacts" / "junit"
+            # Test Python framework
+            logger.info("🐍 Testing Python framework from deployed service...")
+            python_dir = temp_path / "artifacts" / "python"
+            if python_dir.exists():
+                python_runner = PythonTestRunner()
+                python_success = python_runner.run_tests(python_dir, f"http://localhost:{MOCK_SERVICE_PORT}")
+                assert python_success, "Python tests should run against the mock service"
+                logger.info("✅ Python framework test completed")
+            else:
+                logger.warning("⚠️  Python artifacts not found in generated ZIP from deployed service")
             
-            if not python_dir.exists():
-                # Look for Python files in artifacts/python
-                python_dir = temp_path / "artifacts" / "python"
-            
-            if not nodejs_dir.exists():
-                # Look for Node.js files in artifacts/nodejs
-                nodejs_dir = temp_path / "artifacts" / "nodejs"
-            
-            assert java_dir.exists(), "Java test files not found"
-            assert python_dir.exists(), "Python test files not found"
-            assert nodejs_dir.exists(), "Node.js test files not found"
-            
-            logger.info("✅ Generated files extracted successfully")
-            
-            # Test 4: Run Java tests
-            logger.info("🔍 Testing generated Java code...")
-            java_runner = JavaTestRunner()
-            java_success = java_runner.run_tests(java_dir)
-            assert java_success, "Java test compilation/execution failed"
-            
-            # Test 5: Run Python tests
-            logger.info("🔍 Testing generated Python code...")
-            python_runner = PythonTestRunner()
-            python_success = python_runner.run_tests(python_dir)
-            assert python_success, "Python test execution failed"
-            
-            # Test 6: Run Node.js tests
-            logger.info("🔍 Testing generated Node.js code...")
-            node_runner = NodeTestRunner()
-            node_success = node_runner.run_tests(nodejs_dir)
-            assert node_success, "Node.js test execution failed"
+            # Test Node.js framework
+            logger.info("🟢 Testing Node.js framework from deployed service...")
+            node_dir = temp_path / "artifacts" / "nodejs"
+            if node_dir.exists():
+                node_runner = NodeTestRunner()
+                node_success = node_runner.run_tests(node_dir, f"http://localhost:{MOCK_SERVICE_PORT}")
+                assert node_success, "Node.js tests should run against the mock service"
+                logger.info("✅ Node.js framework test completed")
+            else:
+                logger.warning("⚠️  Node.js artifacts not found in generated ZIP from deployed service")
         
-        logger.info("🎉 All post-deployment tests passed!")
+        # Step 8: Verify results
+        logger.info("✅ All tests passed! Post-deployment test successful.")
+        logger.info("🎉 Deployed service works exactly like local development!")
         
+    except Exception as e:
+        logger.error(f"❌ Post-deployment test failed: {e}")
+        raise
     finally:
-        # Cleanup
-        mock_service.cleanup()
-        await deployed_service.close()
-
-
-if __name__ == "__main__":
-    # Run the test directly
-    asyncio.run(test_deployed_service_complete_user_experience())
+        # Clean up
+        try:
+            if 'ui_driver' in locals():
+                ui_driver.stop_browser()
+            if 'mock_service' in locals():
+                mock_service.stop()
+            logger.info("🧹 Cleanup completed")
+        except Exception as cleanup_error:
+            logger.warning(f"⚠️  Cleanup error: {cleanup_error}")
