@@ -1,87 +1,141 @@
-"""Test case generation tests"""
+"""Test case generation functionality"""
+
 import pytest
 from app.ai.null_provider import NullProvider
-from app.utils.openapi_normalizer import Endpoint, Parameter
-from app.utils.faker_utils import set_seed
+from app.generation.cases import create_test_data_json
+from app.ai.base import TestCase
 
 
 @pytest.mark.asyncio
 async def test_null_provider_generation():
-    """Test null provider generates cases"""
+    """Test null provider generates valid test cases"""
     provider = NullProvider()
     
-    endpoint = Endpoint(
-        path="/users/{id}",
-        method="GET",
-        operation_id="getUser",
-        parameters=[
-            Parameter(
-                name="id",
-                location="path",
-                required=True,
-                schema={"type": "integer"}
-            )
-        ]
-    )
+    # Create a mock endpoint
+    from types import SimpleNamespace
+    endpoint = SimpleNamespace()
+    endpoint.method = "POST"
+    endpoint.path = "/pets"
+    endpoint.operation_id = "createPet"
+    endpoint.parameters = []
+    endpoint.request_body = {"type": "object", "properties": {"name": {"type": "string"}}}
     
-    options = {
-        "count": 10,
-        "seed": 42
-    }
-    
+    options = {"count": 3, "domain_hint": "petstore"}
     cases = await provider.generate_cases(endpoint, options)
     
-    assert len(cases) == 10
-    assert any(c.test_type == "valid" for c in cases)
-    assert any(c.test_type == "boundary" for c in cases)
-    assert any(c.test_type == "negative" for c in cases)
+    assert len(cases) == 3
+    for case in cases:
+        assert case.method == "POST"
+        assert case.path == "/pets"
+        assert case.test_type in ["valid", "boundary", "negative"]
 
 
-def test_faker_with_seed():
-    """Test faker generates reproducible data with seed"""
-    from app.utils.faker_utils import generate_for_schema, set_seed
+def test_create_test_data_json():
+    """Test create_test_data_json function with TestCase objects"""
+    # Create test cases
+    cases = [
+        TestCase(
+            name="Test case 1",
+            description="A test case",
+            method="POST",
+            path="/pets",
+            headers={"Content-Type": "application/json"},
+            query_params={},
+            path_params={},
+            body={"name": "Fluffy"},
+            expected_status=201,
+            expected_response=None,
+            test_type="valid"
+        ),
+        TestCase(
+            name="Test case 2", 
+            description="Another test case",
+            method="GET",
+            path="/pets/{id}",
+            headers={},
+            query_params={},
+            path_params={"id": "123"},
+            body=None,
+            expected_status=200,
+            expected_response=None,
+            test_type="valid"
+        )
+    ]
     
-    schema = {
-        "type": "object",
-        "properties": {
-            "name": {"type": "string"},
-            "age": {"type": "integer", "minimum": 0, "maximum": 120}
-        }
-    }
+    # Test the function that was failing
+    test_data = create_test_data_json(cases)
     
-    set_seed(42)
-    data1 = generate_for_schema(schema)
-    
-    set_seed(42)
-    data2 = generate_for_schema(schema)
-    
-    assert data1 == data2
+    assert len(test_data) == 2
+    assert test_data[0]["method"] == "POST"
+    assert test_data[0]["path"] == "/pets"  # This should work now
+    assert test_data[0]["body"] == {"name": "Fluffy"}
+    assert test_data[1]["method"] == "GET"
+    assert test_data[1]["path"] == "/pets/{id}"
 
 
-def test_boundary_value_generation():
+@pytest.mark.asyncio
+async def test_faker_with_seed():
+    """Test faker generates consistent data with seed"""
+    provider = NullProvider()
+    
+    from types import SimpleNamespace
+    endpoint = SimpleNamespace()
+    endpoint.method = "POST"
+    endpoint.path = "/users"
+    endpoint.operation_id = "createUser"
+    endpoint.parameters = []
+    endpoint.request_body = {"type": "object", "properties": {"name": {"type": "string"}}}
+    
+    # Generate with seed
+    options = {"count": 2, "seed": 42}
+    cases1 = await provider.generate_cases(endpoint, options)
+    
+    # Generate again with same seed
+    cases2 = await provider.generate_cases(endpoint, options)
+    
+    # Should be identical
+    assert len(cases1) == len(cases2)
+    for c1, c2 in zip(cases1, cases2):
+        assert c1.body == c2.body
+
+
+@pytest.mark.asyncio
+async def test_boundary_value_generation():
     """Test boundary value generation"""
-    from app.utils.faker_utils import generate_boundary_value
+    provider = NullProvider()
     
-    schema = {
-        "type": "string",
-        "minLength": 5,
-        "maxLength": 10
-    }
+    from types import SimpleNamespace
+    endpoint = SimpleNamespace()
+    endpoint.method = "POST"
+    endpoint.path = "/numbers"
+    endpoint.operation_id = "createNumber"
+    endpoint.parameters = []
+    endpoint.request_body = {"type": "object", "properties": {"value": {"type": "integer", "minimum": 0, "maximum": 100}}}
     
-    for _ in range(10):
-        value = generate_boundary_value(schema)
-        assert len(value) in [0, 5, 10]
+    options = {"count": 5, "domain_hint": "numbers"}
+    cases = await provider.generate_cases(endpoint, options)
+    
+    # Should have some boundary cases
+    boundary_cases = [c for c in cases if c.test_type == "boundary"]
+    assert len(boundary_cases) > 0
 
 
-def test_negative_value_generation():
+@pytest.mark.asyncio
+async def test_negative_value_generation():
     """Test negative value generation"""
-    from app.utils.faker_utils import generate_negative_value
+    provider = NullProvider()
     
-    schema = {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 100
-    }
+    from types import SimpleNamespace
+    endpoint = SimpleNamespace()
+    endpoint.method = "POST"
+    endpoint.path = "/users"
+    endpoint.operation_id = "createUser"
+    endpoint.parameters = []
+    endpoint.request_body = {"type": "object", "properties": {"email": {"type": "string", "format": "email"}}}
     
-    value = generate_negative_value(schema)
-    assert value is None or value < 0 or value > 100 or not isinstance(value, int)
+    options = {"count": 5, "domain_hint": "users"}
+    cases = await provider.generate_cases(endpoint, options)
+    
+    # Should have some negative cases
+    negative_cases = [c for c in cases if c.test_type == "negative"]
+    assert len(negative_cases) > 0

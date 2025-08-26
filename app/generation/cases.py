@@ -35,7 +35,7 @@ def create_test_data_json(cases):
     for case in cases:
         test_data.append(
             {
-                "endpoint": case.endpoint,
+                "path": case.path,  # Use path instead of endpoint
                 "method": case.method,
                 "body": case.body,
                 "query_params": case.query_params,
