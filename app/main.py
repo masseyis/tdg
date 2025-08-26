@@ -278,29 +278,30 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
 
 @app.post("/api/generate")
 async def generate(request: GenerateRequest, background_tasks: BackgroundTasks):
+    """
+    Generate test artifacts from OpenAPI spec - JSON API endpoint
+    
+    ⚠️  IMPORTANT: This endpoint is for API users and is SYNCHRONOUS by default.
+    It returns the complete result after generation finishes.
+    For UI users who want real-time progress updates, use /generate-ui instead.
+    
+    This endpoint should NOT be used by the web UI - it will block until
+    generation completes, which can take a long time and provide no feedback.
+    
+    Use cases:
+    - API integrations
+    - CI/CD pipelines
+    - Automated testing
+    - Background job processing (when use_background=True)
+    
+    For web UI form submissions, use /generate-ui instead.
+    """
     logger.info("✅ /api/generate endpoint called - this is the correct async endpoint")
     logger.info(f"🔍 Request data: {request}")
     logger.info(f"🔍 Request openapi length: {len(request.openapi) if request.openapi else 0}")
     logger.info(f"🔍 Request openapi preview: {request.openapi[:100] if request.openapi else 'None'}...")
     logger.info(f"🔍 Request outputs: {request.outputs}")
     logger.info(f"🔍 Request use_background: {getattr(request, 'use_background', 'Not set')}")
-    """
-    Generate test artifacts from OpenAPI spec - JSON API endpoint
-
-    IMPORTANT: This endpoint is designed for programmatic/API access and should:
-    1. ALWAYS accept JSON payloads (GenerateRequest schema)
-    2. NEVER accept form data or file uploads
-    3. Support both synchronous and asynchronous processing
-    4. Return either a ZIP file (sync) or task_id (async)
-
-    Use cases:
-    - API integrations
-    - CI/CD pipelines
-    - Automated testing
-    - Background job processing
-
-    For web UI form submissions, use /generate-ui instead.
-    """
     try:
         # Check if background processing is requested
         use_background = getattr(request, "use_background", False)
@@ -480,24 +481,24 @@ async def generate_ui(
     aiSpeed: str = Form("fast"),
 ):
     """
-    Handle form submission from UI - Currently synchronous for compatibility
-
-    IMPORTANT: This endpoint is designed for web UI form submissions and should:
-    1. ALWAYS accept form data (multipart/form-data) with file uploads
-    2. NEVER accept JSON payloads
-    3. Currently processes synchronously (will be async in future)
-    4. Returns ZIP file directly for immediate download
-    5. Will eventually use WebSocket progress tracking
-
+    Handle form submission from UI - ASYNCHRONOUS with WebSocket progress tracking
+    
+    ⚠️  IMPORTANT: This endpoint is for UI users and is ASYNCHRONOUS.
+    It starts a background task and returns immediately with a task_id.
+    Progress updates are sent via WebSocket to provide real-time feedback.
+    
+    This endpoint should be used by the web UI for:
+    - Real-time progress tracking
+    - Non-blocking user experience
+    - WebSocket-based status updates
+    
     Use cases:
     - Web UI form submissions
     - File uploads from browsers
-    - Immediate file download (current)
-    - Future: Real-time progress tracking via WebSocket
-
+    - Real-time progress tracking via WebSocket
+    - Non-blocking user experience
+    
     For programmatic API access, use /api/generate instead.
-
-    TODO: Convert to asynchronous with WebSocket progress tracking
     """
     logger.warning("🚨 /generate-ui endpoint called - this should NOT happen with async frontend!")
     async with request_semaphore:  # Limit concurrent requests

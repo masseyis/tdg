@@ -123,10 +123,7 @@ class WebSocketManager:
             disconnected_websockets = []
             message_json = json.dumps(asdict(update))
             logger.info(f"🔍 Broadcasting to {len(self.active_connections[task_id])} WebSocket connections: {message_json}")
-        else:
-            logger.warning(f"⚠️  No active connections found for task {task_id}")
-            logger.warning(f"⚠️  Available tasks: {list(self.active_connections.keys())}")
-
+            
             for websocket in self.active_connections[task_id]:
                 try:
                     await websocket.send_text(message_json)
@@ -152,6 +149,11 @@ class WebSocketManager:
             # Clean up empty task connections
             if task_id in self.active_connections and not self.active_connections[task_id]:
                 del self.active_connections[task_id]
+        else:
+            logger.warning(f"⚠️  No active connections found for task {task_id}")
+            logger.warning(f"⚠️  Available tasks: {list(self.active_connections.keys())}")
+            # This is normal - progress updates can be sent before WebSocket connects
+            # The progress will be stored and sent when the WebSocket connects
 
     def get_progress(self, task_id: str) -> Optional[ProgressUpdate]:
         """Get current progress for a task"""
