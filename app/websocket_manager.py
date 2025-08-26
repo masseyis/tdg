@@ -59,9 +59,18 @@ class WebSocketManager:
 
         try:
             # Keep connection alive and handle disconnection
-            async for message in websocket:
-                # Handle any client messages if needed
-                pass
+            # FastAPI WebSocket doesn't support async for, so we just keep the connection open
+            # The connection will be closed when the client disconnects or when we close it
+            while True:
+                # Wait for client to disconnect or send a message
+                try:
+                    message = await websocket.receive_text()
+                    # Handle any client messages if needed
+                    logger.debug(f"Received WebSocket message: {message}")
+                except Exception as e:
+                    # Client disconnected or connection closed
+                    logger.info(f"WebSocket connection closed for task {task_id}")
+                    break
         except Exception as e:
             logger.error(f"WebSocket error: {e}")
             # Capture WebSocket errors with Sentry for monitoring

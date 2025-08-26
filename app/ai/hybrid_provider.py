@@ -57,13 +57,17 @@ class HybridProvider(AIProvider):
         cases_per_endpoint = options.get("cases_per_endpoint", 5)
         task_id = options.get("task_id")  # For progress updates
         
-        logger.info(f"🔄 Starting hybrid generation for {endpoint.path}")
+        # Safely access endpoint attributes
+        method = getattr(endpoint, 'method', 'UNKNOWN')
+        path = getattr(endpoint, 'path', 'UNKNOWN')
+        
+        logger.info(f"🔄 Starting hybrid generation for {path}")
         logger.info(f"   Domain: {domain_hint}, Cases: {cases_per_endpoint}")
         
         # Step 1: Generate foundation cases with null provider
         if task_id:
             from app.main import update_progress
-            await update_progress(task_id, "generating", 40, f"Generating foundation cases for {endpoint.method} {endpoint.path}...")
+            await update_progress(task_id, "generating", 40, f"Generating foundation cases for {method} {path}...")
         
         logger.info("📝 Step 1: Generating foundation cases with null provider...")
         foundation_cases = await self.null_provider.generate_cases(endpoint, options)
@@ -262,11 +266,15 @@ Generate enhanced test cases now:
             # Convert to TestCase objects
             enhanced_cases = []
             for case_data in enhanced_data:
+                # Safely access endpoint attributes
+                method = getattr(endpoint, 'method', 'UNKNOWN')
+                path = getattr(endpoint, 'path', 'UNKNOWN')
+                
                 case = TestCase(
                     name=case_data.get("name", "Enhanced Test Case"),
                     description=None,
-                    method=case_data.get("method", endpoint.method),
-                    path=case_data.get("path", endpoint.path),
+                    method=case_data.get("method", method),
+                    path=case_data.get("path", path),
                     headers=case_data.get("headers", {}),
                     query_params=case_data.get("query_params", {}),
                     path_params=case_data.get("path_params", {}),
