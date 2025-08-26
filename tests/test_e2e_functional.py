@@ -170,6 +170,9 @@ class WebUIDriver:
             chrome_options.add_argument("--remote-debugging-port=0")
             chrome_options.add_argument("--disable-web-security")
             chrome_options.add_argument("--allow-running-insecure-content")
+            chrome_options.add_argument("--enable-logging")
+            chrome_options.add_argument("--v=1")
+            chrome_options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
             
             # Use webdriver-manager to automatically download and manage ChromeDriver
             service = Service(ChromeDriverManager().install())
