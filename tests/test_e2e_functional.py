@@ -640,7 +640,9 @@ class WebUIDriver:
             generate_url = f"{self.base_url}/api/generate"
             logger.info(f"Generating via synchronous endpoint: {generate_url}")
             
-            with httpx.Client() as client:
+            # Use longer timeout for deployed service (AI generation takes time)
+            timeout = httpx.Timeout(300.0)  # 5 minutes for AI generation
+            with httpx.Client(timeout=timeout) as client:
                 response = client.post(generate_url, json=request_data)
                 if response.status_code == 200:
                     # Save the ZIP file
