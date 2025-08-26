@@ -1,7 +1,7 @@
 """Null AI provider - uses faker and heuristics only"""
 
 import random
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from app.ai.base import AIProvider, TestCase
 from app.progress import ProgressCallback

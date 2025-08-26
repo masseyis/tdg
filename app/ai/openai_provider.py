@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from app.ai.base import AIProvider, TestCase
 from app.progress import ProgressCallback

@@ -135,6 +135,8 @@ class HybridProvider(AIProvider):
             # Capture AI enhancement errors with Sentry for monitoring
             try:
                 from app.sentry import capture_exception
+                # Get task_id from progress callback if available
+                task_id = getattr(progress_callback, 'task_id', None) if progress_callback else None
                 capture_exception(e, context={"task_id": task_id, "stage": "ai_enhancement"})
             except ImportError:
                 pass  # Sentry not available
