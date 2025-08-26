@@ -428,18 +428,13 @@
             const specUrl = formData.get('specUrl');
             
             if (file) {
-                // Handle file upload - convert to base64
+                // Handle file upload - properly await the file text
                 const fileContent = await file.text();
-                // Convert to base64 for API compatibility
-                const base64Content = btoa(unescape(encodeURIComponent(fileContent)));
-                return base64Content;
+                return fileContent;
             } else if (specUrl) {
                 // Handle URL
                 const response = await fetch(specUrl);
-                const content = await response.text();
-                // Convert to base64 for API compatibility
-                const base64Content = btoa(unescape(encodeURIComponent(content)));
-                return base64Content;
+                return await response.text();
             } else {
                 throw new Error('No file or URL provided');
             }

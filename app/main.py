@@ -312,22 +312,9 @@ async def generate(request: GenerateRequest, background_tasks: BackgroundTasks):
 
             task_id = str(uuid.uuid4())
 
-            # Initialize progress tracking before starting background task
-            # This ensures WebSocket clients can connect and receive all updates
-            try:
-                await update_progress(task_id, "initializing", 0, "Initializing generation task...")
-                logger.info(f"✅ Progress tracking initialized for task {task_id}")
-            except Exception as e:
-                logger.error(f"❌ Failed to initialize progress tracking: {e}")
-                # Continue anyway - the background task will handle progress updates
-
             # Start background task with progress tracking
             background_tasks.add_task(generate_test_artifacts_background, task_id, request)
             logger.info(f"✅ Background task started for task {task_id}")
-
-            # Small delay to allow WebSocket connection to establish
-            # This prevents race conditions where progress updates are sent before client connects
-            await asyncio.sleep(0.1)
 
             # Return task ID for WebSocket progress tracking
             logger.info(f"✅ Returning task ID: {task_id}")
