@@ -275,24 +275,46 @@ async def generate_test_cases_with_progress(
     # Create test data JSON
     test_data = create_test_data_json(all_cases)
 
-    # Generate artifacts for each output format
-    artifacts = {}
+    # Create a proper artifacts structure
+    artifacts = {
+        "endpoint_count": len(normalized_spec.endpoints),
+        "cases_per_endpoint": cases_per_endpoint,
+        "total_cases": len(all_cases),
+    }
 
-    for output_format in outputs:
-        if output_format == "junit":
-            artifacts["junit"] = generate_junit_artifacts(all_cases, test_data)
-        elif output_format == "python":
-            artifacts["python"] = generate_python_artifacts(all_cases, test_data)
-        elif output_format == "nodejs":
-            artifacts["nodejs"] = generate_nodejs_artifacts(all_cases, test_data)
-        elif output_format == "postman":
-            artifacts["postman"] = generate_postman_artifacts(all_cases, test_data)
-        elif output_format == "csv":
-            artifacts["csv"] = generate_csv_artifacts(all_cases)
-        elif output_format == "sql":
-            artifacts["sql"] = generate_sql_artifacts(all_cases)
-        elif output_format == "json":
-            artifacts["json"] = test_data
+    # Create flows for the renderers
+    flows = create_basic_flows(normalized_spec.endpoints)
+
+    # Generate artifacts for each output format
+    if "junit" in outputs:
+        logger.info(
+            f"Calling junit_restassured.render with all_cases type: {type(all_cases)}, normalized_spec type: {type(normalized_spec)}, flows type: {type(flows)}"
+        )
+        logger.info(f"normalized_spec has title: {hasattr(normalized_spec, 'title')}")
+        if hasattr(normalized_spec, "title"):
+            logger.info(f"normalized_spec.title: {normalized_spec.title}")
+        artifacts["junit"] = junit_restassured.render(all_cases, normalized_spec, flows)
+
+    if "postman" in outputs:
+        artifacts["postman"] = postman.render(all_cases, normalized_spec, flows)
+
+    if "wiremock" in outputs:
+        artifacts["wiremock"] = wiremock.render(all_cases, normalized_spec, flows)
+
+    if "python" in outputs:
+        artifacts["python"] = python_renderer.render(all_cases, normalized_spec, flows)
+
+    if "nodejs" in outputs:
+        artifacts["nodejs"] = nodejs_renderer.render(all_cases, normalized_spec, flows)
+
+    if "json" in outputs:
+        artifacts["json"] = test_data
+
+    if "csv" in outputs:
+        artifacts["csv"] = csv_renderer.render(all_cases)
+
+    if "sql" in outputs:
+        artifacts["sql"] = sql_renderer.render(all_cases, table_name=domain_hint or "test_data")
 
     await update_progress(task_id, "generating", 90, "Hybrid generation complete, creating artifacts...")
 
