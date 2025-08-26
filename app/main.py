@@ -374,12 +374,21 @@ async def download_task_result(task_id: str):
         if not progress or progress.stage != "complete":
             raise HTTPException(status_code=404, detail="Task not found or not complete")
 
-        # For now, we'll need to regenerate the file since we don't store it
-        # In a production system, you'd store the file path or content
-        # For now, return an error suggesting to use the synchronous endpoint
-        raise HTTPException(
-            status_code=501,
-            detail="Download endpoint not yet implemented. Use synchronous generation for now.",
+        # Get the stored ZIP file path
+        task_result = websocket_manager.task_results.get(task_id)
+        if not task_result or "zip_path" not in task_result:
+            raise HTTPException(status_code=404, detail="Task result not found")
+
+        zip_path = Path(task_result["zip_path"])
+        if not zip_path.exists():
+            raise HTTPException(status_code=404, detail="ZIP file not found")
+
+        # Return the ZIP file
+        return FileResponse(
+            zip_path,
+            media_type="application/octet-stream",
+            filename="test-artifacts.zip",
+            headers={"Content-Disposition": "attachment; filename=test-artifacts.zip"},
         )
 
     except Exception as e:
@@ -429,9 +438,8 @@ async def generate_test_artifacts_background(task_id: str, request: GenerateRequ
             task_id, "complete", 100, "Generation complete! ZIP file ready for download."
         )
 
-        # Store the result for later retrieval
-        # Note: In a production system, you'd store this in Redis/database
-        # For now, we'll just mark it as complete
+        # Store the ZIP file path for later retrieval
+        websocket_manager.task_results[task_id] = {"zip_path": str(zip_path)}
 
         # Clean up memory after generation
         del artifacts

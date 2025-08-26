@@ -300,6 +300,13 @@ class WebUIDriver:
             form = self.driver.find_element(By.TAG_NAME, "form")
             logger.info(f"Form action: {form.get_attribute('action')}")
             logger.info(f"Form method: {form.get_attribute('method')}")
+            logger.info(f"Form onsubmit: {form.get_attribute('onsubmit')}")
+            
+            # Check if the onsubmit handler is properly set
+            if form.get_attribute('onsubmit'):
+                logger.info("✅ Form has onsubmit handler")
+            else:
+                logger.warning("⚠️  Form does not have onsubmit handler")
             
             # Check if file is uploaded
             file_input = self.driver.find_element(By.NAME, "file")
@@ -309,18 +316,48 @@ class WebUIDriver:
                 logger.warning("File input has no value")
             
             # Submit the form
+            logger.info("About to click submit button...")
             submit_button.click()
             logger.info("Clicked submit button")
+            
+            # Check if the onsubmit handler was called
+            time.sleep(1)
+            console_logs_click = self.driver.get_log('browser')
+            if console_logs_click:
+                logger.info("Console logs after clicking submit:")
+                for log in console_logs_click:
+                    logger.info(f"  {log['level']}: {log['message']}")
+                    
+                # Check for JavaScript errors
+                error_logs = [log for log in console_logs_click if log['level'] == 'SEVERE']
+                if error_logs:
+                    logger.error("❌ JavaScript errors detected:")
+                    for error in error_logs:
+                        logger.error(f"  {error['message']}")
+                        
+                # Check for handleFormSubmit calls
+                handle_logs = [log for log in console_logs_click if 'handleFormSubmit' in log['message']]
+                if handle_logs:
+                    logger.info("✅ handleFormSubmit function called")
+                else:
+                    logger.warning("⚠️  handleFormSubmit function not called")
             
             # Wait a moment for any immediate errors
             time.sleep(2)
             
-            # Check for any JavaScript errors
+            # Check for any JavaScript errors and console logs
             console_logs_after = self.driver.get_log('browser')
             if console_logs_after:
                 logger.info("Browser console logs after submission:")
                 for log in console_logs_after:
                     logger.info(f"  {log['level']}: {log['message']}")
+                    
+                # Check if we're using the asynchronous approach
+                async_logs = [log for log in console_logs_after if 'handleFormSubmit' in log['message'] or 'startGenerationTask' in log['message']]
+                if async_logs:
+                    logger.info("✅ Asynchronous approach detected in console logs")
+                else:
+                    logger.warning("⚠️  No asynchronous approach detected - might be using synchronous endpoint")
             
             # Check if we got redirected or if there's an error
             current_url = self.driver.current_url
@@ -355,9 +392,14 @@ class WebUIDriver:
             return False
     
     def wait_for_generation_complete(self, timeout: int = 300) -> bool:
-        """Wait for test generation to complete"""
+        """Wait for test generation to complete with progress tracking"""
         try:
-            logger.info("🔍 Looking for generation completion indicators...")
+            logger.info("🔍 Looking for generation completion indicators with progress tracking...")
+            
+            # Track progress updates
+            progress_messages = []
+            last_progress = 0
+            progress_update_count = 0
             
             # Check for various completion indicators
             completion_indicators = [
@@ -389,6 +431,44 @@ class WebUIDriver:
                         logger.info(f"⏳ Still waiting... Current URL: {current_url}")
                         logger.info(f"⏳ Page contains 'error': {'error' in page_source}")
                         logger.info(f"⏳ Page contains 'success': {'success' in page_source}")
+                    
+                    # Check for progress updates
+                    try:
+                        # Look for progress bar
+                        progress_bar = self.driver.find_element(By.ID, "progressBar")
+                        current_progress = int(progress_bar.get_attribute("aria-valuenow") or "0")
+                        
+                        # Look for progress message
+                        progress_message_elem = self.driver.find_element(By.CSS_SELECTOR, "#loadingSpinner p.text-gray-300")
+                        current_message = progress_message_elem.text if progress_message_elem else ""
+                        
+                        # Track progress changes
+                        if current_progress != last_progress or current_message not in progress_messages:
+                            logger.info(f"📊 Progress Update: {current_progress}% - {current_message}")
+                            last_progress = current_progress
+                            if current_message and current_message not in progress_messages:
+                                progress_messages.append(current_message)
+                                progress_update_count += 1
+                        
+                        # Check for specific progress stages
+                        if "foundation cases" in current_message.lower():
+                            logger.info("✅ Progress: Foundation cases generation detected")
+                        elif "enhancing with ai" in current_message.lower():
+                            logger.info("✅ Progress: AI enhancement detected")
+                        elif "hybrid generation complete" in current_message.lower():
+                            logger.info("✅ Progress: Hybrid generation complete detected")
+                        elif "creating zip" in current_message.lower():
+                            logger.info("✅ Progress: ZIP creation detected")
+                        
+                        # Fail if no progress updates for too long
+                        if time.time() - start_time > 60 and progress_update_count == 0:
+                            logger.error("❌ No progress updates detected - progress tracking may be broken")
+                            return False
+                        
+                    except Exception as e:
+                        # Progress tracking failed, but continue with other completion checks
+                        if time.time() - start_time > 30:  # Only log after 30 seconds
+                            logger.warning(f"⚠️  Progress tracking failed: {e}")
                     
                     # Check for completion indicators
                     for selector_type, selector_value in completion_indicators:

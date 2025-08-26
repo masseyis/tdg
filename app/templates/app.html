@@ -113,7 +113,7 @@
             <p class="text-gray-300">Upload your OpenAPI specification and get comprehensive test coverage</p>
         </div>
 
-        <form method="POST" action="/generate-ui" enctype="multipart/form-data" class="space-y-6" onsubmit="return handleFormSubmit(this, event)">
+        <form method="POST" enctype="multipart/form-data" class="space-y-6" onsubmit="return handleFormSubmit(this, event)">
             <!-- File Upload Section -->
             <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
                 <h2 class="text-xl font-semibold font-space-grotesk mb-4">Upload OpenAPI Specification</h2>
@@ -308,9 +308,11 @@
             }
         }
 
-        // Form now submits directly to /generate-ui endpoint
+        // Form now uses asynchronous generation with WebSocket progress tracking
         // Handle custom domain hint before submission
-        function handleFormSubmit(form, event) {
+        async function handleFormSubmit(form, event) {
+            console.log('🔄 handleFormSubmit called - using asynchronous approach');
+            
             const domainSelect = document.getElementById('domainHint');
             const customInput = document.getElementById('customDomainHint');
             
@@ -326,49 +328,26 @@
             // Show loading spinner
             showLoadingSpinner();
             
-            // Submit form manually to handle the ZIP file response properly
+            // Prevent default form submission
             event.preventDefault();
+            console.log('✅ Prevented default form submission');
             
             const formData = new FormData(form);
             
-            fetch('/generate-ui', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (response.ok) {
-                    // Handle ZIP file download
-                    return response.blob();
-                } else {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-            })
-            .then(blob => {
-                // Create download link
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'test-artifacts.zip';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+            try {
+                console.log('🚀 Starting asynchronous generation...');
+                // Start asynchronous generation with WebSocket progress tracking
+                const taskId = await startGenerationTask(formData);
+                console.log('✅ Generation task started with ID:', taskId);
                 
-                // Hide loading spinner and show success
-                hideLoadingSpinner();
-                showSuccessMessage('Test generation completed! ZIP file downloaded.');
+                // The WebSocket will handle progress updates and completion
+                // The download will be triggered when the task completes
                 
-                // Show results section
-                const resultsSection = document.getElementById('results');
-                if (resultsSection) {
-                    resultsSection.classList.remove('hidden');
-                }
-            })
-            .catch(error => {
-                console.error('Generation failed:', error);
+            } catch (error) {
+                console.error('❌ Generation failed:', error);
                 hideLoadingSpinner();
                 showErrorMessage('Test generation failed: ' + error.message);
-            });
+            }
             
             return false; // Prevent default form submission
         }
@@ -378,19 +357,21 @@
         
         async function startGenerationTask(formData) {
             try {
-                // Start the generation task
+                console.log('🔄 startGenerationTask called');
+                // Start the generation task with background processing
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        spec: await formDataToSpec(formData),
+                        openapi: await formDataToSpec(formData),
                         casesPerEndpoint: parseInt(formData.get('casesPerEndpoint')),
                         outputs: formData.getAll('outputs'),
                         domainHint: formData.get('domainHint'),
                         seed: formData.get('seed') ? parseInt(formData.get('seed')) : null,
-                        aiSpeed: formData.get('aiSpeed')
+                        aiSpeed: formData.get('aiSpeed'),
+                        use_background: true  // Enable WebSocket progress tracking
                     })
                 });
                 
@@ -477,9 +458,38 @@
             
             // Handle completion
             if (progress.stage === 'complete') {
-                setTimeout(() => {
+                setTimeout(async () => {
                     hideLoadingSpinner();
-                    // TODO: Handle completion (download file, etc.)
+                    
+                    // Download the generated file
+                    try {
+                        const taskId = progress.task_id || websocket.url.split('/').pop();
+                        const downloadResponse = await fetch(`/api/download/${taskId}`);
+                        if (downloadResponse.ok) {
+                            const blob = await downloadResponse.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'test-artifacts.zip';
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+                            
+                            showSuccessMessage('Test generation completed! ZIP file downloaded.');
+                            
+                            // Show results section
+                            const resultsSection = document.getElementById('results');
+                            if (resultsSection) {
+                                resultsSection.classList.remove('hidden');
+                            }
+                        } else {
+                            throw new Error(`Download failed: ${downloadResponse.status}`);
+                        }
+                    } catch (error) {
+                        console.error('Download failed:', error);
+                        showErrorMessage('Generation completed but download failed: ' + error.message);
+                    }
                 }, 1000);
             }
         }

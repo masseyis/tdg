@@ -19,6 +19,7 @@ class ProgressUpdate:
     progress: int
     message: str
     timestamp: str
+    task_id: Optional[str] = None
     endpoint_count: Optional[int] = None
     current_endpoint: Optional[int] = None
 
@@ -29,6 +30,7 @@ class WebSocketManager:
     def __init__(self):
         self.active_connections: Dict[str, List[any]] = {}  # task_id -> list of websockets
         self.task_progress: Dict[str, ProgressUpdate] = {}
+        self.task_results: Dict[str, Dict[str, str]] = {}  # task_id -> result data
 
     async def connect(self, websocket, task_id: str):
         """Connect a WebSocket to a specific task"""
@@ -83,6 +85,7 @@ class WebSocketManager:
             progress=progress,
             message=message,
             timestamp=datetime.now().isoformat(),
+            task_id=task_id,
             endpoint_count=endpoint_count,
             current_endpoint=current_endpoint,
         )
@@ -121,6 +124,9 @@ class WebSocketManager:
         """Clean up completed task data"""
         if task_id in self.task_progress:
             del self.task_progress[task_id]
+
+        if task_id in self.task_results:
+            del self.task_results[task_id]
 
         # Close all WebSocket connections for this task
         if task_id in self.active_connections:
