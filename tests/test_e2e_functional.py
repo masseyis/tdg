@@ -174,6 +174,16 @@ class WebUIDriver:
             chrome_options.add_argument("--v=1")
             chrome_options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
             
+            # Configure download directory for CI environment
+            download_dir = os.path.join(os.getcwd(), "downloads")
+            os.makedirs(download_dir, exist_ok=True)
+            chrome_options.add_experimental_option("prefs", {
+                "download.default_directory": download_dir,
+                "download.prompt_for_download": False,
+                "download.directory_upgrade": True,
+                "safebrowsing.enabled": False
+            })
+            
             # Use webdriver-manager to automatically download and manage ChromeDriver
             service = Service(ChromeDriverManager().install())
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -569,9 +579,8 @@ class WebUIDriver:
             # Wait for download to complete
             time.sleep(5)
             
-            # Look for the downloaded file in the default download directory
-            # This is a simplified approach - in production you might need more sophisticated download handling
-            download_dir = Path.home() / "Downloads"
+            # Look for the downloaded file in the configured download directory
+            download_dir = Path(os.path.join(os.getcwd(), "downloads"))
             
             # Look for the most recent ZIP file
             zip_files = list(download_dir.glob("test-artifacts*.zip"))
@@ -581,7 +590,16 @@ class WebUIDriver:
                 logger.info(f"✅ Found downloaded file: {latest_zip}")
                 return latest_zip
             
-            logger.warning("No downloaded ZIP file found")
+            # Also check the user's Downloads directory as fallback
+            user_downloads = Path.home() / "Downloads"
+            if user_downloads.exists():
+                zip_files = list(user_downloads.glob("test-artifacts*.zip"))
+                if zip_files:
+                    latest_zip = max(zip_files, key=lambda f: f.stat().st_mtime)
+                    logger.info(f"✅ Found downloaded file in user Downloads: {latest_zip}")
+                    return latest_zip
+            
+            logger.warning(f"No downloaded ZIP file found in {download_dir} or {user_downloads}")
             return None
             
         except Exception as e:
