@@ -306,8 +306,16 @@ async def generate(request: GenerateRequest, background_tasks: BackgroundTasks =
 
             task_id = str(uuid.uuid4())
 
+            # Initialize progress tracking before starting background task
+            # This ensures WebSocket clients can connect and receive all updates
+            await update_progress(task_id, "initializing", 0, "Initializing generation task...")
+
             # Start background task with progress tracking
             background_tasks.add_task(generate_test_artifacts_background, task_id, request)
+
+            # Small delay to allow WebSocket connection to establish
+            # This prevents race conditions where progress updates are sent before client connects
+            await asyncio.sleep(0.1)
 
             # Return task ID for WebSocket progress tracking
             return {"task_id": task_id, "status": "started"}
@@ -395,6 +403,8 @@ async def download_task_result(task_id: str):
 
     except Exception as e:
         logger.error(f"Download error for task {task_id}: {e}")
+        # Capture download errors with Sentry for monitoring
+        capture_exception(e, context={"task_id": task_id, "stage": "download"})
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -567,6 +577,8 @@ async def generate_ui(
             import traceback
 
             logger.error(f"Traceback: {traceback.format_exc()}")
+            # Capture UI generation errors with Sentry for monitoring
+            capture_exception(e, context={"stage": "ui_generation"})
             # Return a proper error response instead of HTML template
             raise HTTPException(status_code=500, detail=str(e))
 

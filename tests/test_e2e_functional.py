@@ -1452,6 +1452,182 @@ def test_ui_endpoints():
         raise
 
 
+@pytest.mark.timeout(300)  # 5 minute timeout
+def test_realtime_progress_updates():
+    """
+    ⚠️  CRITICAL: Test real-time progress updates via WebSocket ⚠️
+    
+    This test specifically validates that:
+    1. WebSocket connects before generation starts
+    2. Progress updates arrive in real-time (not all at once)
+    3. UI shows progressive updates
+    4. No race conditions between WebSocket connection and progress updates
+    """
+    
+    # Detect if we're running in CI
+    is_ci = os.getenv('CI') == 'true' or os.getenv('GITHUB_ACTIONS') == 'true'
+    
+    if is_ci:
+        logger.info("🚀 Running in CI environment - expecting services to be available")
+        web_port = 8000
+        mock_port = 8082
+    else:
+        logger.info("💻 Running in local environment - starting services ourselves")
+        web_port = None
+        mock_port = None
+    
+    # Step 1: Start the main web service
+    logger.info("🌐 Starting main web service...")
+    web_service = WebService(port=web_port)
+    web_service.start()
+    
+    # Step 2: Start the mock API service
+    logger.info("🌐 Starting mock API service...")
+    if mock_port is None:
+        mock_port = web_service._find_random_port()
+    mock_service = MockService(Path("tests/samples/petstore-minimal.yaml"), port=mock_port)
+    mock_service.start()
+    
+    # Step 3: Start the web UI driver
+    logger.info("🌐 Starting web UI driver...")
+    ui_driver = WebUIDriver(f"http://localhost:{web_service.port}")
+    
+    try:
+        # Wait for services to be ready
+        logger.info("⏳ Waiting for services to be ready...")
+        time.sleep(5)
+        
+        # Verify web service is responding
+        logger.info("🔍 Verifying web service health...")
+        with httpx.Client() as http_client:
+            response = http_client.get(f"http://localhost:{web_service.port}/health")
+            assert response.status_code == 200, f"Web service should be healthy, got {response.status_code}"
+        logger.info("✅ Web service is responding")
+        
+        # Step 4: Start browser and navigate to app
+        logger.info("🌐 Starting browser...")
+        if not ui_driver.start_browser():
+            raise AssertionError("Browser failed to start")
+        logger.info("✅ Browser started successfully")
+        
+        logger.info("🧭 Navigating to app page...")
+        if not ui_driver.navigate_to_app():
+            raise AssertionError("Failed to navigate to app page")
+        logger.info("✅ Successfully navigated to app page")
+        
+        # Step 5: Upload OpenAPI spec and generate tests
+        logger.info("📝 Generating tests via web UI...")
+        spec_file = Path("tests/samples/petstore-minimal.yaml")
+        
+        if not ui_driver.upload_spec_file(spec_file):
+            raise AssertionError("Failed to upload spec file")
+        logger.info("✅ Spec file uploaded successfully")
+        
+        if not ui_driver.set_test_parameters(cases_per_endpoint=3, domain_hint="petstore"):
+            raise AssertionError("Failed to set test parameters")
+        logger.info("✅ Test parameters set successfully")
+        
+        # Step 6: Submit form and monitor real-time progress
+        logger.info("🔄 Submitting form and monitoring real-time progress...")
+        
+        # Record start time
+        start_time = time.time()
+        
+        if not ui_driver.submit_form():
+            raise AssertionError("Failed to submit form")
+        logger.info("✅ Form submitted successfully")
+        
+        # Step 7: Monitor progress updates with timing validation
+        logger.info("⏱️  Monitoring progress updates with timing validation...")
+        
+        progress_updates = []
+        last_progress_time = start_time
+        
+        # Monitor for at least 30 seconds or until completion
+        max_wait_time = 60  # 60 seconds max
+        while time.time() - start_time < max_wait_time:
+            try:
+                # Check current progress
+                progress_bar = ui_driver.driver.find_element(By.ID, "progressBar")
+                current_progress = int(progress_bar.get_attribute("aria-valuenow") or "0")
+                
+                progress_message_elem = ui_driver.driver.find_element(By.CSS_SELECTOR, "#loadingSpinner p.text-gray-300")
+                current_message = progress_message_elem.text if progress_message_elem else ""
+                
+                current_time = time.time()
+                
+                # Record progress update if it changed
+                if not progress_updates or progress_updates[-1]["progress"] != current_progress:
+                    progress_updates.append({
+                        "time": current_time - start_time,
+                        "progress": current_progress,
+                        "message": current_message
+                    })
+                    logger.info(f"📊 Progress Update at {current_time - start_time:.1f}s: {current_progress}% - {current_message}")
+                    last_progress_time = current_time
+                
+                # Check for completion
+                if current_progress == 100 and "complete" in current_message.lower():
+                    logger.info("✅ Generation completed successfully")
+                    break
+                
+                # Check for errors
+                if "error" in current_message.lower() or "failed" in current_message.lower():
+                    raise AssertionError(f"Generation failed: {current_message}")
+                
+                time.sleep(0.5)  # Check every 500ms
+                
+            except Exception as e:
+                logger.error(f"Error monitoring progress: {e}")
+                break
+        
+        # Step 8: Validate real-time progress behavior
+        logger.info("🔍 Validating real-time progress behavior...")
+        
+        # Must have multiple progress updates
+        assert len(progress_updates) >= 3, f"Expected at least 3 progress updates, got {len(progress_updates)}"
+        
+        # Progress updates should be spread out over time (not all at once)
+        total_time = progress_updates[-1]["time"] - progress_updates[0]["time"]
+        assert total_time >= 2.0, f"Progress updates should be spread over at least 2 seconds, got {total_time:.1f}s"
+        
+        # Progress should increase over time
+        for i in range(1, len(progress_updates)):
+            assert progress_updates[i]["progress"] >= progress_updates[i-1]["progress"], \
+                f"Progress should not decrease: {progress_updates[i-1]['progress']} -> {progress_updates[i]['progress']}"
+        
+        # Should see different stages
+        messages = [update["message"] for update in progress_updates]
+        stage_keywords = ["parsing", "generating", "enhancing", "zipping", "complete"]
+        found_stages = [keyword for keyword in stage_keywords if any(keyword in msg.lower() for msg in messages)]
+        assert len(found_stages) >= 2, f"Should see at least 2 different stages, found: {found_stages}"
+        
+        logger.info(f"✅ Real-time progress validation passed! {len(progress_updates)} updates over {total_time:.1f}s")
+        
+        # Step 9: Check for console errors
+        logger.info("🔍 Checking for console errors...")
+        if ui_driver.check_console_errors():
+            raise AssertionError("Console errors detected - test should fail")
+        
+        logger.info("✅ Real-time progress test completed successfully!")
+        
+    except Exception as e:
+        logger.error(f"❌ Real-time progress test failed: {e}")
+        raise
+    finally:
+        # Clean up
+        try:
+            if 'ui_driver' in locals():
+                ui_driver.stop_browser()
+            if 'mock_service' in locals():
+                mock_service.stop()
+            if 'web_service' in locals():
+                web_service.stop()
+            logger.info("🧹 Cleanup completed")
+        except Exception as cleanup_error:
+            logger.warning(f"⚠️  Cleanup error: {cleanup_error}")
+
+
 if __name__ == "__main__":
     # Run the tests
     test_complete_user_experience()
