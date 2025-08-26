@@ -34,9 +34,7 @@ class WebSocketManager:
 
     async def connect(self, websocket, task_id: str):
         """Connect a WebSocket to a specific task"""
-        # Accept the WebSocket connection
-        await websocket.accept()
-
+        # Note: websocket.accept() is already called in the main.py endpoint
         # Add to active connections
         if task_id not in self.active_connections:
             self.active_connections[task_id] = []

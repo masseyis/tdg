@@ -77,7 +77,10 @@ class HybridProvider(AIProvider):
         
         # Step 2: Enhance with AI
         if task_id:
-            await update_progress(task_id, "generating", 60, f"Enhancing cases with AI for {endpoint.method} {endpoint.path}...")
+            # Safely access endpoint attributes
+            method = getattr(endpoint, 'method', 'UNKNOWN')
+            path = getattr(endpoint, 'path', 'UNKNOWN')
+            await update_progress(task_id, "generating", 60, f"Enhancing cases with AI for {method} {path}...")
         
         logger.info("🤖 Step 2: Enhancing cases with AI...")
         enhanced_cases = await self._enhance_with_ai(foundation_cases, endpoint, domain_hint, task_id)
@@ -100,19 +103,26 @@ class HybridProvider(AIProvider):
             # Prepare the prompt for AI enhancement
             if task_id:
                 from app.main import update_progress
-                await update_progress(task_id, "generating", 65, f"Preparing AI enhancement prompt for {endpoint.method} {endpoint.path}...")
+                # Safely access endpoint attributes
+                method = getattr(endpoint, 'method', 'UNKNOWN')
+                path = getattr(endpoint, 'path', 'UNKNOWN')
+                await update_progress(task_id, "generating", 65, f"Preparing AI enhancement prompt for {method} {path}...")
             
             prompt = self._build_enhancement_prompt(foundation_cases, endpoint, domain_hint)
             
             # Get AI response
             if task_id:
-                await update_progress(task_id, "generating", 70, f"Calling AI for enhancement of {endpoint.method} {endpoint.path}...")
+                method = getattr(endpoint, 'method', 'UNKNOWN')
+                path = getattr(endpoint, 'path', 'UNKNOWN')
+                await update_progress(task_id, "generating", 70, f"Calling AI for enhancement of {method} {path}...")
             
             response = await self.ai_provider._call_ai(prompt)
             
             # Parse enhanced cases
             if task_id:
-                await update_progress(task_id, "generating", 75, f"Parsing AI enhancement results for {endpoint.method} {endpoint.path}...")
+                method = getattr(endpoint, 'method', 'UNKNOWN')
+                path = getattr(endpoint, 'path', 'UNKNOWN')
+                await update_progress(task_id, "generating", 75, f"Parsing AI enhancement results for {method} {path}...")
             
             enhanced_cases = self._parse_enhanced_cases(response, endpoint)
             
@@ -125,7 +135,9 @@ class HybridProvider(AIProvider):
             
             if task_id:
                 from app.main import update_progress
-                await update_progress(task_id, "generating", 75, f"AI enhancement failed, using foundation cases only for {endpoint.method} {endpoint.path}")
+                method = getattr(endpoint, 'method', 'UNKNOWN')
+                path = getattr(endpoint, 'path', 'UNKNOWN')
+                await update_progress(task_id, "generating", 75, f"AI enhancement failed, using foundation cases only for {method} {path}")
             
             return []
 
@@ -147,14 +159,19 @@ class HybridProvider(AIProvider):
                 "path_params": case.path_params
             })
         
+        # Safely access endpoint attributes
+        method = getattr(endpoint, 'method', 'UNKNOWN')
+        path = getattr(endpoint, 'path', 'UNKNOWN')
+        summary = getattr(endpoint, 'summary', 'N/A')
+        
         prompt = f"""
 You are an expert test case generator. I have generated some foundation test cases for an API endpoint, and I need you to enhance them with domain-specific values and additional edge cases.
 
 ENDPOINT DETAILS:
-- Method: {endpoint.method}
-- Path: {endpoint.path}
+- Method: {method}
+- Path: {path}
 - Domain: {domain_hint or 'General'}
-- Description: {getattr(endpoint, 'summary', 'N/A')}
+- Description: {summary}
 
 FOUNDATION TEST CASES:
 {json.dumps(foundation_json, indent=2)}
