@@ -216,6 +216,8 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str):
         logger.info(f"WebSocket disconnected for task {task_id}")
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
+        # Capture WebSocket errors with Sentry for monitoring
+        capture_exception(e, context={"task_id": task_id, "stage": "websocket_connection"})
 
 
 @app.get("/progress/{request_id}")
@@ -447,6 +449,8 @@ async def generate_test_artifacts_background(task_id: str, request: GenerateRequ
 
     except Exception as e:
         logger.error(f"Background generation error: {e}")
+        # Capture error with Sentry for monitoring
+        capture_exception(e, context={"task_id": task_id, "stage": "background_generation"})
         await update_progress(task_id, "error", 0, f"Generation failed: {str(e)}")
     finally:
         # Clean up task data after a delay

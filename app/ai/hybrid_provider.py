@@ -133,6 +133,13 @@ class HybridProvider(AIProvider):
             logger.error(f"❌ AI enhancement failed: {e}")
             logger.info("🔄 Falling back to foundation cases only")
             
+            # Capture AI enhancement errors with Sentry for monitoring
+            try:
+                from app.sentry import capture_exception
+                capture_exception(e, context={"task_id": task_id, "stage": "ai_enhancement"})
+            except ImportError:
+                pass  # Sentry not available
+            
             if task_id:
                 from app.main import update_progress
                 method = getattr(endpoint, 'method', 'UNKNOWN')

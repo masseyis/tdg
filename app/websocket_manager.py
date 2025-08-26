@@ -46,6 +46,12 @@ class WebSocketManager:
                 await websocket.send_text(json.dumps(asdict(self.task_progress[task_id])))
             except Exception as e:
                 logger.error(f"Failed to send initial progress: {e}")
+                # Capture WebSocket send errors with Sentry for monitoring
+                try:
+                    from app.sentry import capture_exception
+                    capture_exception(e, context={"task_id": task_id, "stage": "websocket_send_initial"})
+                except ImportError:
+                    pass  # Sentry not available
 
         logger.info(
             f"WebSocket connected for task {task_id}. Total connections: {len(self.active_connections[task_id])}"
@@ -58,6 +64,12 @@ class WebSocketManager:
                 pass
         except Exception as e:
             logger.error(f"WebSocket error: {e}")
+            # Capture WebSocket errors with Sentry for monitoring
+            try:
+                from app.sentry import capture_exception
+                capture_exception(e, context={"task_id": task_id, "stage": "websocket_manager"})
+            except ImportError:
+                pass  # Sentry not available
         finally:
             # Remove from active connections
             if task_id in self.active_connections:
@@ -100,6 +112,12 @@ class WebSocketManager:
                     await websocket.send_text(json.dumps(asdict(update)))
                 except Exception as e:
                     logger.error(f"Failed to send progress update to WebSocket: {e}")
+                    # Capture WebSocket send errors with Sentry for monitoring
+                    try:
+                        from app.sentry import capture_exception
+                        capture_exception(e, context={"task_id": task_id, "stage": "websocket_send_progress"})
+                    except ImportError:
+                        pass  # Sentry not available
                     disconnected_websockets.append(websocket)
 
             # Remove disconnected websockets
@@ -133,6 +151,12 @@ class WebSocketManager:
                     asyncio.create_task(websocket.close())
                 except Exception as e:
                     logger.error(f"Error closing WebSocket: {e}")
+                    # Capture WebSocket close errors with Sentry for monitoring
+                    try:
+                        from app.sentry import capture_exception
+                        capture_exception(e, context={"task_id": task_id, "stage": "websocket_close"})
+                    except ImportError:
+                        pass  # Sentry not available
             del self.active_connections[task_id]
 
 
