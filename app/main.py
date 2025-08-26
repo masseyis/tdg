@@ -277,8 +277,13 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
 
 
 @app.post("/api/generate")
-async def generate(request: GenerateRequest, background_tasks: BackgroundTasks = None):
+async def generate(request: GenerateRequest, background_tasks: BackgroundTasks):
     logger.info("✅ /api/generate endpoint called - this is the correct async endpoint")
+    logger.info(f"🔍 Request data: {request}")
+    logger.info(f"🔍 Request openapi length: {len(request.openapi) if request.openapi else 0}")
+    logger.info(f"🔍 Request openapi preview: {request.openapi[:100] if request.openapi else 'None'}...")
+    logger.info(f"🔍 Request outputs: {request.outputs}")
+    logger.info(f"🔍 Request use_background: {getattr(request, 'use_background', 'Not set')}")
     """
     Generate test artifacts from OpenAPI spec - JSON API endpoint
 
@@ -309,16 +314,23 @@ async def generate(request: GenerateRequest, background_tasks: BackgroundTasks =
 
             # Initialize progress tracking before starting background task
             # This ensures WebSocket clients can connect and receive all updates
-            await update_progress(task_id, "initializing", 0, "Initializing generation task...")
+            try:
+                await update_progress(task_id, "initializing", 0, "Initializing generation task...")
+                logger.info(f"✅ Progress tracking initialized for task {task_id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize progress tracking: {e}")
+                # Continue anyway - the background task will handle progress updates
 
             # Start background task with progress tracking
             background_tasks.add_task(generate_test_artifacts_background, task_id, request)
+            logger.info(f"✅ Background task started for task {task_id}")
 
             # Small delay to allow WebSocket connection to establish
             # This prevents race conditions where progress updates are sent before client connects
             await asyncio.sleep(0.1)
 
             # Return task ID for WebSocket progress tracking
+            logger.info(f"✅ Returning task ID: {task_id}")
             return {"task_id": task_id, "status": "started"}
         else:
             # SYNC MODE: Generate immediately and return ZIP file

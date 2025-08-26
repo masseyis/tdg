@@ -21,22 +21,34 @@ async def load_openapi_spec(source: str) -> Dict[str, Any]:
     Returns:
         Parsed OpenAPI specification
     """
+    logger.info(f"🔍 Loading OpenAPI spec from source type: {type(source)}")
+    logger.info(f"🔍 Source length: {len(source) if isinstance(source, str) else 'N/A'}")
+    logger.info(f"🔍 Source preview: {source[:100] if isinstance(source, str) else 'N/A'}...")
+    
     try:
         # Try URL first
         if source.startswith(("http://", "https://")):
+            logger.info(f"🔍 Loading from URL: {source}")
             return await load_from_url(source)
 
         # Try base64 decode
         try:
+            logger.info("🔍 Attempting base64 decode...")
             decoded = base64.b64decode(source)
             content = decoded.decode("utf-8")
-            return parse_spec_content(content)
-        except Exception:
+            logger.info(f"🔍 Base64 decoded content preview: {content[:100]}...")
+            result = parse_spec_content(content)
+            logger.info(f"🔍 Successfully parsed base64 content")
+            return result
+        except Exception as e:
+            logger.info(f"🔍 Base64 decode failed: {e}, trying raw content...")
             # Maybe it's raw content
-            return parse_spec_content(source)
+            result = parse_spec_content(source)
+            logger.info(f"🔍 Successfully parsed raw content")
+            return result
 
     except Exception as e:
-        logger.error(f"Failed to load OpenAPI spec: {e}")
+        logger.error(f"❌ Failed to load OpenAPI spec: {e}")
         raise ValueError(f"Invalid OpenAPI source: {e}")
 
 

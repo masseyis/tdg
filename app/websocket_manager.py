@@ -39,6 +39,9 @@ class WebSocketManager:
         if task_id not in self.active_connections:
             self.active_connections[task_id] = []
         self.active_connections[task_id].append(websocket)
+        
+        logger.info(f"🔌 WebSocket added to active connections for task {task_id}. Total connections: {len(self.active_connections[task_id])}")
+        logger.info(f"🔍 Current active connections: {list(self.active_connections.keys())}")
 
         # Send initial progress if available
         if task_id in self.task_progress:
@@ -113,12 +116,21 @@ class WebSocketManager:
         logger.info(f"Progress update for {task_id}: {stage} - {progress}% - {message}")
 
         # Broadcast to all connected clients for this task
+        logger.info(f"🔍 Checking for active connections for task {task_id}")
+        logger.info(f"🔍 Available task IDs: {list(self.active_connections.keys())}")
+        
         if task_id in self.active_connections:
             disconnected_websockets = []
+            message_json = json.dumps(asdict(update))
+            logger.info(f"🔍 Broadcasting to {len(self.active_connections[task_id])} WebSocket connections: {message_json}")
+        else:
+            logger.warning(f"⚠️  No active connections found for task {task_id}")
+            logger.warning(f"⚠️  Available tasks: {list(self.active_connections.keys())}")
 
             for websocket in self.active_connections[task_id]:
                 try:
-                    await websocket.send_text(json.dumps(asdict(update)))
+                    await websocket.send_text(message_json)
+                    logger.info(f"✅ Successfully sent progress update to WebSocket")
                 except Exception as e:
                     logger.error(f"Failed to send progress update to WebSocket: {e}")
                     # Capture WebSocket send errors with Sentry for monitoring

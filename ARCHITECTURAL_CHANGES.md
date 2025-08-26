@@ -18,6 +18,33 @@ Each entry should include:
 ---
 
 ## Recent Changes
+### 2025-08-26 - [Auto-detected Change]
+
+**Change Type**: General
+
+**Summary**: 1 architectural files modified, 0 new files added
+
+**Rationale**: [To be filled manually]
+
+**Implementation**: [To be filled manually]
+
+**Pros**:
+- ✅ [To be filled manually]
+
+**Cons**:
+- ⚠️ [To be filled manually]
+
+**Impact**: [To be filled manually]
+
+**Migration**: [To be filled manually]
+
+**Auto-detected Changes**:
+🏗️ **Architectural Changes Detected:**
+  - pp/main.py
+
+
+---
+
 
 ### 2024-01-XX - Progress Tracking System Implementation
 

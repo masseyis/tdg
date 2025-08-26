@@ -428,13 +428,18 @@
             const specUrl = formData.get('specUrl');
             
             if (file) {
-                // Handle file upload - properly await the file text
+                // Handle file upload - convert to base64
                 const fileContent = await file.text();
-                return fileContent;
+                // Convert to base64 for API compatibility
+                const base64Content = btoa(unescape(encodeURIComponent(fileContent)));
+                return base64Content;
             } else if (specUrl) {
                 // Handle URL
                 const response = await fetch(specUrl);
-                return await response.text();
+                const content = await response.text();
+                // Convert to base64 for API compatibility
+                const base64Content = btoa(unescape(encodeURIComponent(content)));
+                return base64Content;
             } else {
                 throw new Error('No file or URL provided');
             }
@@ -451,8 +456,14 @@
             };
             
             websocket.onmessage = function(event) {
-                const progress = JSON.parse(event.data);
-                updateProgressFromWebSocket(progress);
+                console.log('🔍 WebSocket message received:', event.data);
+                try {
+                    const progress = JSON.parse(event.data);
+                    console.log('✅ Parsed progress update:', progress);
+                    updateProgressFromWebSocket(progress);
+                } catch (error) {
+                    console.error('❌ Failed to parse WebSocket message:', error);
+                }
             };
             
             websocket.onclose = function(event) {
