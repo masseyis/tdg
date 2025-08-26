@@ -148,7 +148,13 @@ class WebService:
 
 
 class WebUIDriver:
-    """Driver for the web UI using Selenium"""
+    """
+    Driver for the web UI using Selenium
+    
+    ⚠️  CRITICAL: This class is also used by test_post_deploy.py!
+    ⚠️  Any changes to this class will affect both the e2e test and post-deploy test.
+    ⚠️  Ensure both tests stay in sync and validate the same behavior.
+    """
     
     def __init__(self, base_url: str = "http://localhost:8080"):
         self.base_url = base_url
@@ -655,7 +661,12 @@ class WebUIDriver:
 
 
 class JavaTestRunner:
-    """Runner for generated Java tests"""
+    """
+    Runner for generated Java tests
+    
+    ⚠️  CRITICAL: This class is also used by test_post_deploy.py!
+    ⚠️  Any changes to this class will affect both the e2e test and post-deploy test.
+    """
     
     def run_tests(self, java_dir: Path, target_url: str = "http://localhost:8082") -> bool:
         """Run the generated Java tests"""
@@ -746,7 +757,12 @@ class JavaTestRunner:
 
 
 class PythonTestRunner:
-    """Runner for generated Python tests"""
+    """
+    Runner for generated Python tests
+    
+    ⚠️  CRITICAL: This class is also used by test_post_deploy.py!
+    ⚠️  Any changes to this class will affect both the e2e test and post-deploy test.
+    """
     
     def run_tests(self, python_dir: Path, target_url: str = "http://localhost:8082") -> bool:
         """Run the generated Python tests"""
