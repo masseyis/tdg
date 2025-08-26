@@ -118,3 +118,37 @@ class OpenAIProvider(AIProvider):
             from app.ai.null_provider import NullProvider
 
             return await NullProvider().generate_cases(endpoint, options)
+
+    async def _call_ai(self, prompt: str) -> str:
+        """
+        Call OpenAI API with a custom prompt and return the response
+        
+        Args:
+            prompt: The prompt to send to OpenAI
+            
+        Returns:
+            The AI response as a string
+        """
+        if not self.client:
+            raise Exception("OpenAI client not available")
+        
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",  # Use fast model for enhancement
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a test data generation expert. Generate test cases as valid JSON.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.3,  # Lower temperature for more consistent enhancement
+                max_tokens=1500,  # Reasonable limit for enhancement
+                timeout=30,  # Shorter timeout for enhancement
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            logger.error(f"OpenAI API call failed: {e}")
+            raise

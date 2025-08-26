@@ -164,3 +164,49 @@ class FastAIProvider(AIProvider):
 
         # Order test cases logically: CREATE → READ → UPDATE → DELETE
         return order_test_cases(cases)
+
+    async def _call_ai(self, prompt: str) -> str:
+        """
+        Call AI API with a custom prompt and return the response
+        
+        Args:
+            prompt: The prompt to send to AI
+            
+        Returns:
+            The AI response as a string
+        """
+        # Try OpenAI first (fastest)
+        if self.openai_client:
+            try:
+                response = self.openai_client.chat.completions.create(
+                    model="gpt-4o-mini",  # Fastest model
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a test data generation expert. Generate test cases as valid JSON.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.3,  # Lower temperature for consistent enhancement
+                    max_tokens=1500,
+                    timeout=30,
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+                logger.warning(f"OpenAI enhancement failed: {e}")
+        
+        # Try Anthropic as fallback
+        if self.anthropic_client:
+            try:
+                message = self.anthropic_client.messages.create(
+                    model="claude-3-haiku-20240307",  # Fastest model
+                    max_tokens=1500,
+                    temperature=0.3,
+                    system="You are a test data generation expert. Generate test cases as valid JSON.",
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                return message.content[0].text
+            except Exception as e:
+                logger.warning(f"Anthropic enhancement failed: {e}")
+        
+        raise Exception("No AI provider available for enhancement")

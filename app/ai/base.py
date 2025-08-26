@@ -50,13 +50,14 @@ def get_provider(provider_name: Optional[str] = None) -> AIProvider:
     Get AI provider instance
 
     Args:
-        provider_name: Provider name (null, openai, anthropic, fast)
+        provider_name: Provider name (null, openai, anthropic, fast, hybrid)
 
     Returns:
         AI provider instance
     """
     from app.ai.anthropic_provider import AnthropicProvider
     from app.ai.fast_provider import FastAIProvider
+    from app.ai.hybrid_provider import HybridProvider
     from app.ai.null_provider import NullProvider
     from app.ai.openai_provider import OpenAIProvider
 
@@ -65,16 +66,20 @@ def get_provider(provider_name: Optional[str] = None) -> AIProvider:
         "openai": OpenAIProvider(),
         "anthropic": AnthropicProvider(),
         "fast": FastAIProvider(),
+        "hybrid": HybridProvider(),
     }
 
     # Auto-detect if not specified
     if not provider_name:
-        # Try fast provider first for speed
+        # Try hybrid provider first (best of both worlds)
+        if providers["hybrid"].is_available():
+            return providers["hybrid"]
+        # Then try fast provider for speed
         if providers["fast"].is_available():
             return providers["fast"]
         # Then try other providers
         for name, provider in providers.items():
-            if name not in ["null", "fast"] and provider.is_available():
+            if name not in ["null", "fast", "hybrid"] and provider.is_available():
                 return provider
         return providers["null"]
 
@@ -93,6 +98,7 @@ def get_provider_for_speed(speed: str) -> AIProvider:
     """
     from app.ai.anthropic_provider import AnthropicProvider
     from app.ai.fast_provider import FastAIProvider
+    from app.ai.hybrid_provider import HybridProvider
     from app.ai.null_provider import NullProvider
     from app.ai.openai_provider import OpenAIProvider
 
@@ -101,9 +107,13 @@ def get_provider_for_speed(speed: str) -> AIProvider:
         "openai": OpenAIProvider(),
         "anthropic": AnthropicProvider(),
         "fast": FastAIProvider(),
+        "hybrid": HybridProvider(),
     }
 
     if speed == "fast":
+        # Use hybrid provider first (fast foundation + AI enhancement)
+        if providers["hybrid"].is_available():
+            return providers["hybrid"]
         # Use fast provider if available, otherwise fastest available
         if providers["fast"].is_available():
             return providers["fast"]
@@ -115,6 +125,9 @@ def get_provider_for_speed(speed: str) -> AIProvider:
             return providers["anthropic"]
 
     elif speed == "balanced":
+        # Use hybrid provider for balanced approach
+        if providers["hybrid"].is_available():
+            return providers["hybrid"]
         # Use balanced models
         if providers["openai"].is_available():
             return providers["openai"]
@@ -124,6 +137,9 @@ def get_provider_for_speed(speed: str) -> AIProvider:
             return providers["fast"]
 
     elif speed == "quality":
+        # Use hybrid provider for quality (foundation + AI enhancement)
+        if providers["hybrid"].is_available():
+            return providers["hybrid"]
         # Use highest quality models
         if providers["openai"].is_available():
             return providers["openai"]

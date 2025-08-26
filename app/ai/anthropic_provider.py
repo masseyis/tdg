@@ -109,3 +109,31 @@ class AnthropicProvider(AIProvider):
             from app.ai.null_provider import NullProvider
 
             return await NullProvider().generate_cases(endpoint, options)
+
+    async def _call_ai(self, prompt: str) -> str:
+        """
+        Call Anthropic API with a custom prompt and return the response
+        
+        Args:
+            prompt: The prompt to send to Anthropic
+            
+        Returns:
+            The AI response as a string
+        """
+        if not self.client:
+            raise Exception("Anthropic client not available")
+        
+        try:
+            message = self.client.messages.create(
+                model="claude-3-haiku-20240307",  # Fastest model for enhancement
+                max_tokens=1500,
+                temperature=0.3,  # Lower temperature for consistent enhancement
+                system="You are a test data generation expert. Generate test cases as valid JSON.",
+                messages=[{"role": "user", "content": prompt}],
+            )
+            
+            return message.content[0].text
+            
+        except Exception as e:
+            logger.error(f"Anthropic API call failed: {e}")
+            raise
