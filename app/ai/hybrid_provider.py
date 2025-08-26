@@ -55,41 +55,65 @@ class HybridProvider(AIProvider):
         """
         domain_hint = options.get("domain_hint", "")
         cases_per_endpoint = options.get("cases_per_endpoint", 5)
+        task_id = options.get("task_id")  # For progress updates
         
         logger.info(f"🔄 Starting hybrid generation for {endpoint.path}")
         logger.info(f"   Domain: {domain_hint}, Cases: {cases_per_endpoint}")
         
         # Step 1: Generate foundation cases with null provider
+        if task_id:
+            from app.main import update_progress
+            await update_progress(task_id, "generating", 40, f"Generating foundation cases for {endpoint.method} {endpoint.path}...")
+        
         logger.info("📝 Step 1: Generating foundation cases with null provider...")
         foundation_cases = await self.null_provider.generate_cases(endpoint, options)
         logger.info(f"✅ Generated {len(foundation_cases)} foundation cases")
         
         if not self.ai_provider:
             logger.warning("⚠️  No AI provider available, returning foundation cases only")
+            if task_id:
+                await update_progress(task_id, "generating", 80, f"Foundation cases complete ({len(foundation_cases)} cases)")
             return foundation_cases
         
         # Step 2: Enhance with AI
+        if task_id:
+            await update_progress(task_id, "generating", 60, f"Enhancing cases with AI for {endpoint.method} {endpoint.path}...")
+        
         logger.info("🤖 Step 2: Enhancing cases with AI...")
-        enhanced_cases = await self._enhance_with_ai(foundation_cases, endpoint, domain_hint)
+        enhanced_cases = await self._enhance_with_ai(foundation_cases, endpoint, domain_hint, task_id)
         
         # Combine foundation and enhanced cases
         all_cases = foundation_cases + enhanced_cases
+        
+        if task_id:
+            await update_progress(task_id, "generating", 80, f"Hybrid generation complete: {len(all_cases)} total cases")
+        
         logger.info(f"🎉 Hybrid generation complete: {len(all_cases)} total cases")
         
         return all_cases
 
-    async def _enhance_with_ai(self, foundation_cases: List[TestCase], endpoint: Any, domain_hint: str) -> List[TestCase]:
+    async def _enhance_with_ai(self, foundation_cases: List[TestCase], endpoint: Any, domain_hint: str, task_id: str = None) -> List[TestCase]:
         """
         Send foundation cases to AI for enhancement with domain-specific values and edge cases
         """
         try:
             # Prepare the prompt for AI enhancement
+            if task_id:
+                from app.main import update_progress
+                await update_progress(task_id, "generating", 65, f"Preparing AI enhancement prompt for {endpoint.method} {endpoint.path}...")
+            
             prompt = self._build_enhancement_prompt(foundation_cases, endpoint, domain_hint)
             
             # Get AI response
+            if task_id:
+                await update_progress(task_id, "generating", 70, f"Calling AI for enhancement of {endpoint.method} {endpoint.path}...")
+            
             response = await self.ai_provider._call_ai(prompt)
             
             # Parse enhanced cases
+            if task_id:
+                await update_progress(task_id, "generating", 75, f"Parsing AI enhancement results for {endpoint.method} {endpoint.path}...")
+            
             enhanced_cases = self._parse_enhanced_cases(response, endpoint)
             
             logger.info(f"✅ AI enhanced with {len(enhanced_cases)} additional cases")
@@ -98,6 +122,11 @@ class HybridProvider(AIProvider):
         except Exception as e:
             logger.error(f"❌ AI enhancement failed: {e}")
             logger.info("🔄 Falling back to foundation cases only")
+            
+            if task_id:
+                from app.main import update_progress
+                await update_progress(task_id, "generating", 75, f"AI enhancement failed, using foundation cases only for {endpoint.method} {endpoint.path}")
+            
             return []
 
     def _build_enhancement_prompt(self, foundation_cases: List[TestCase], endpoint: Any, domain_hint: str) -> str:

@@ -233,24 +233,24 @@ async def generate_test_cases_with_progress(
 
     # Process endpoints with progress updates
     total_endpoints = len(normalized_spec.endpoints)
-    await update_progress(task_id, "generating", 30, f"Processing {total_endpoints} endpoints...")
+    await update_progress(task_id, "generating", 30, f"Starting hybrid generation for {total_endpoints} endpoints...")
 
     endpoint_results = []
     for i, endpoint in enumerate(normalized_spec.endpoints):
         # Update progress for each endpoint
-        progress = 30 + int((i / total_endpoints) * 60)  # 30% to 90%
+        progress = 30 + int((i / total_endpoints) * 50)  # 30% to 80% (leaving room for AI enhancement)
         await update_progress(
             task_id,
             "generating",
             progress,
-            f"Generating test cases for endpoint {i+1}/{total_endpoints}: {endpoint.method} {endpoint.path}",
+            f"Processing endpoint {i+1}/{total_endpoints}: {endpoint.method} {endpoint.path}",
             total_endpoints,
             i + 1,
         )
 
         # Generate cases for this endpoint
         cases = await provider.generate_cases(
-            endpoint, {"count": cases_per_endpoint, "domain_hint": domain_hint, "speed": ai_speed}
+            endpoint, {"count": cases_per_endpoint, "domain_hint": domain_hint, "speed": ai_speed, "task_id": task_id}
         )
 
         endpoint_results.append(cases)
@@ -288,6 +288,6 @@ async def generate_test_cases_with_progress(
         elif output_format == "json":
             artifacts["json"] = test_data
 
-    await update_progress(task_id, "generating", 90, "Test cases generated, creating artifacts...")
+    await update_progress(task_id, "generating", 90, "Hybrid generation complete, creating artifacts...")
 
     return artifacts
