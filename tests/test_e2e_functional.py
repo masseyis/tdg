@@ -579,6 +579,61 @@ class WebUIDriver:
             logger.error(f"❌ Failed to wait for generation completion: {e}")
             return False
     
+    def check_console_errors(self) -> bool:
+        """Check for JavaScript console errors and return True if any found"""
+        try:
+            # Get JavaScript errors captured by our error handler
+            js_errors = self.driver.execute_script("return window.jsErrors || [];")
+            console_errors = self.driver.execute_script("return window.consoleErrors || [];")
+            
+            # Filter out expected warnings (like Tailwind CDN warning)
+            filtered_console_errors = []
+            for error in console_errors:
+                message = error.get('message', '').lower()
+                # Skip expected warnings
+                if 'tailwindcss.com should not be used in production' in message:
+                    continue
+                if 'sentry script failed to load' in message:
+                    continue
+                filtered_console_errors.append(error)
+            
+            # Check for any serious errors
+            if js_errors:
+                logger.error(f"❌ JavaScript errors detected: {js_errors}")
+                return True
+                
+            if filtered_console_errors:
+                logger.error(f"❌ Console errors detected: {filtered_console_errors}")
+                return True
+            
+            # Also check browser console logs for any SEVERE errors
+            logs = self.driver.get_log('browser')
+            severe_errors = [log for log in logs if log['level'] == 'SEVERE']
+            
+            # Filter out expected severe errors
+            filtered_severe_errors = []
+            for error in severe_errors:
+                message = error.get('message', '').lower()
+                # Skip expected errors
+                if 'sentry is not defined' in message:
+                    continue
+                if 'failed to find a valid digest' in message:
+                    continue
+                if 'favicon.ico' in message:
+                    continue
+                filtered_severe_errors.append(error)
+            
+            if filtered_severe_errors:
+                logger.error(f"❌ Browser console severe errors detected: {filtered_severe_errors}")
+                return True
+            
+            logger.info("✅ No console errors detected")
+            return False
+            
+        except Exception as e:
+            logger.warning(f"⚠️  Could not check console errors: {e}")
+            return False
+
     def get_downloaded_file_path(self) -> Optional[Path]:
         """Get the path to the downloaded ZIP file"""
         try:
@@ -1101,7 +1156,12 @@ def test_complete_user_experience():
             else:
                 logger.warning("⚠️  Node.js artifacts not found in generated ZIP")
         
-        # Step 9: Verify results
+        # Step 9: Check for console errors
+        logger.info("🔍 Checking for console errors...")
+        if ui_driver.check_console_errors():
+            raise AssertionError("Console errors detected - test should fail")
+        
+        # Step 10: Verify results
         logger.info("✅ All tests passed! End-to-end test successful.")
         
     except Exception as e:
@@ -1281,7 +1341,12 @@ def test_complete_user_experience_with_ai():
             else:
                 logger.warning("⚠️  AI-generated Node.js artifacts not found in generated ZIP")
         
-        # Step 9: Verify results
+        # Step 9: Check for console errors
+        logger.info("🔍 Checking for console errors in AI test...")
+        if ui_driver.check_console_errors():
+            raise AssertionError("Console errors detected in AI test - test should fail")
+        
+        # Step 10: Verify results
         logger.info("✅ All AI integration tests passed! Real AI e2e test successful.")
         logger.info("🎉 AI integration is working correctly!")
         

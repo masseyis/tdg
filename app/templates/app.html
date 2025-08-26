@@ -10,47 +10,76 @@
     {% if sentry_dsn %}
     <script
         src="https://browser.sentry-cdn.com/7.101.1/bundle.min.js"
-        integrity="sha384-6rKXz8J+QvKvzH7mjcYDXtXJ8iz+eTjvQj4YwPz6nJ6y7S7zQj5zQj5zQj5zQj5zQ"
+        integrity="sha384-uRHrDzdcwaJ9trQspN0dg1BhQfoPW1iZKMTaUdOK7McKwwTuvpHvlu0kgeoFWs2l"
         crossorigin="anonymous"
     ></script>
     <script>
-        Sentry.init({
-            dsn: "{{ sentry_dsn }}",
-            environment: "{{ sentry_environment }}",
-            release: "tdg-mvp@{{ sentry_environment }}",
-            tracesSampleRate: 0.1,
-            profilesSampleRate: 0.1,
-            integrations: [
-                Sentry.browserTracingIntegration(),
-                Sentry.replayIntegration({
-                    maskAllText: false,
-                    blockAllMedia: false,
-                }),
-            ],
-            beforeSend(event, hint) {
-                // Filter out certain errors
-                if (hint.originalException) {
-                    const errorType = hint.originalException.name || hint.originalException.constructor.name;
-                    if (['ValidationError', 'TypeError'].includes(errorType)) {
-                        return null;
+        // Only initialize Sentry if the script loaded successfully
+        if (typeof Sentry !== 'undefined') {
+            Sentry.init({
+                dsn: "{{ sentry_dsn }}",
+                environment: "{{ sentry_environment }}",
+                release: "tdg-mvp@{{ sentry_environment }}",
+                tracesSampleRate: 0.1,
+                profilesSampleRate: 0.1,
+                integrations: [
+                    Sentry.browserTracingIntegration(),
+                    Sentry.replayIntegration({
+                        maskAllText: false,
+                        blockAllMedia: false,
+                    }),
+                ],
+                beforeSend(event, hint) {
+                    // Filter out certain errors
+                    if (hint.originalException) {
+                        const errorType = hint.originalException.name || hint.originalException.constructor.name;
+                        if (['ValidationError', 'TypeError'].includes(errorType)) {
+                            return null;
+                        }
                     }
-                }
-                return event;
-            },
-        });
+                    return event;
+                },
+            });
+        } else {
+            console.warn('Sentry script failed to load, error tracking disabled');
+        }
     </script>
     {% endif %}
     
     <script>
         // Global error handler to capture JavaScript errors
         window.jsErrors = [];
+        window.consoleErrors = [];
+        
+        // Capture console errors
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            window.consoleErrors.push({
+                type: 'console.error',
+                message: args.join(' '),
+                timestamp: new Date().toISOString()
+            });
+            originalConsoleError.apply(console, args);
+        };
+        
+        const originalConsoleWarn = console.warn;
+        console.warn = function(...args) {
+            window.consoleErrors.push({
+                type: 'console.warn',
+                message: args.join(' '),
+                timestamp: new Date().toISOString()
+            });
+            originalConsoleWarn.apply(console, args);
+        };
+        
         window.addEventListener('error', function(e) {
             window.jsErrors.push({
                 message: e.message,
                 filename: e.filename,
                 lineno: e.lineno,
                 colno: e.colno,
-                error: e.error ? e.error.stack : 'No stack trace'
+                error: e.error ? e.error.stack : 'No stack trace',
+                timestamp: new Date().toISOString()
             });
             console.error('JavaScript error captured:', e);
             
@@ -64,7 +93,8 @@
         window.addEventListener('unhandledrejection', function(e) {
             window.jsErrors.push({
                 type: 'unhandledrejection',
-                reason: e.reason
+                reason: e.reason,
+                timestamp: new Date().toISOString()
             });
             console.error('Unhandled promise rejection:', e.reason);
             
