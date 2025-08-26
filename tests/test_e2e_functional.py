@@ -454,6 +454,7 @@ class WebUIDriver:
                     
                     # Check for progress updates
                     try:
+                        logger.info(f"🔍 Checking progress updates (count: {progress_update_count})...")
                         # Look for progress bar
                         progress_bar = self.driver.find_element(By.ID, "progressBar")
                         current_progress = int(progress_bar.get_attribute("aria-valuenow") or "0")
@@ -515,24 +516,41 @@ class WebUIDriver:
                             logger.error("❌ No progress updates detected - progress tracking may be broken")
                             return False
                         
+                        # Require at least some progress updates to be seen
+                        if time.time() - start_time > 30 and progress_update_count == 0:
+                            logger.warning("⚠️  No progress updates detected yet - progress indicator may not be working")
+                        
                     except Exception as e:
                         # Progress tracking failed, but continue with other completion checks
                         if time.time() - start_time > 30:  # Only log after 30 seconds
                             logger.warning(f"⚠️  Progress tracking failed: {e}")
                     
                     # Check for completion indicators
+                    logger.info(f"🔍 Checking completion indicators (progress count: {progress_update_count})...")
                     for selector_type, selector_value in completion_indicators:
                         try:
                             if selector_type == By.ID:
                                 element = self.driver.find_element(selector_type, selector_value)
                                 if not element.is_displayed():
                                     logger.info(f"✅ Found hidden completion indicator: {selector_value}")
-                                    return True
+                                    # Only allow completion if we've seen progress updates
+                                    if progress_update_count > 0:
+                                        logger.info(f"✅ Progress tracking confirmed: {progress_update_count} updates seen")
+                                        return True
+                                    else:
+                                        logger.error("❌ Completion detected but NO progress updates were seen - progress indicator is broken!")
+                                        return False
                             else:
                                 element = self.driver.find_element(selector_type, selector_value)
                                 if element.is_displayed():
                                     logger.info(f"✅ Found visible completion indicator: {selector_value}")
-                                    return True
+                                    # Only allow completion if we've seen progress updates
+                                    if progress_update_count > 0:
+                                        logger.info(f"✅ Progress tracking confirmed: {progress_update_count} updates seen")
+                                        return True
+                                    else:
+                                        logger.error("❌ Completion detected but NO progress updates were seen - progress indicator is broken!")
+                                        return False
                         except:
                             continue
                     
@@ -544,14 +562,26 @@ class WebUIDriver:
                     # Check if we're still on the same page (form submission might redirect)
                     if "/generate-ui" in current_url or "/result" in current_url:
                         logger.info("✅ Page redirected to result/generate page")
-                        return True
+                        # Only allow completion if we've seen progress updates
+                        if progress_update_count > 0:
+                            logger.info(f"✅ Progress tracking confirmed: {progress_update_count} updates seen")
+                            return True
+                        else:
+                            logger.error("❌ Page redirect detected but NO progress updates were seen - progress indicator is broken!")
+                            return False
                     
                     # Check if the loading spinner has disappeared (indicating completion)
                     try:
                         spinner = self.driver.find_element(By.ID, "loadingSpinner")
                         if not spinner.is_displayed():
                             logger.info("✅ Loading spinner disappeared - generation likely complete")
-                            return True
+                            # Only allow completion if we've seen progress updates
+                            if progress_update_count > 0:
+                                logger.info(f"✅ Progress tracking confirmed: {progress_update_count} updates seen")
+                                return True
+                            else:
+                                logger.error("❌ Spinner disappeared but NO progress updates were seen - progress indicator is broken!")
+                                return False
                     except:
                         # Spinner not found, might mean it was never shown or already hidden
                         pass
@@ -561,7 +591,13 @@ class WebUIDriver:
                         submit_button = self.driver.find_element(By.XPATH, "//button[@type='submit']")
                         if not submit_button.get_attribute("disabled"):
                             logger.info("✅ Submit button is no longer disabled - generation likely complete")
-                            return True
+                            # Only allow completion if we've seen progress updates
+                            if progress_update_count > 0:
+                                logger.info(f"✅ Progress tracking confirmed: {progress_update_count} updates seen")
+                                return True
+                            else:
+                                logger.error("❌ Submit button enabled but NO progress updates were seen - progress indicator is broken!")
+                                return False
                     except:
                         pass
                     
