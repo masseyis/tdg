@@ -4,6 +4,7 @@ import random
 from typing import Any, Dict, List
 
 from app.ai.base import AIProvider, TestCase
+from app.progress import ProgressCallback
 from app.ai.prompts import order_test_cases
 from app.utils.faker_utils import (
     generate_boundary_value,
@@ -20,7 +21,7 @@ class NullProvider(AIProvider):
         """Always available"""
         return True
 
-    async def generate_cases(self, endpoint: Any, options: Dict[str, Any]) -> List[TestCase]:
+    async def generate_cases(self, endpoint: Any, options: Dict[str, Any], progress_callback: Optional[ProgressCallback] = None) -> List[TestCase]:
         """Generate test cases using faker and heuristics"""
         cases = []
         count = options.get("count", 10)

@@ -5,6 +5,7 @@ import logging
 from typing import Any, Dict, List
 
 from app.ai.base import AIProvider, TestCase
+from app.progress import ProgressCallback
 from app.ai.prompts import get_test_generation_prompt, order_test_cases
 from app.config import settings
 from app.utils.json_repair import extract_json_from_content, safe_json_parse
@@ -40,7 +41,7 @@ class AnthropicProvider(AIProvider):
         else:
             return "claude-3-sonnet-20240229", 0.3, 2000  # Default to balanced
 
-    async def generate_cases(self, endpoint: Any, options: Dict[str, Any]) -> List[TestCase]:
+    async def generate_cases(self, endpoint: Any, options: Dict[str, Any], progress_callback: Optional[ProgressCallback] = None) -> List[TestCase]:
         """Generate test cases using Anthropic"""
         if not self.client:
             # Fallback to null provider

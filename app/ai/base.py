@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from app.progress import ProgressCallback
+
 
 @dataclass
 class TestCase:
@@ -26,13 +28,14 @@ class AIProvider(ABC):
     """Abstract base class for AI providers"""
 
     @abstractmethod
-    async def generate_cases(self, endpoint: Any, options: Dict[str, Any]) -> List[TestCase]:
+    async def generate_cases(self, endpoint: Any, options: Dict[str, Any], progress_callback: Optional[ProgressCallback] = None) -> List[TestCase]:
         """
         Generate test cases for an endpoint
 
         Args:
             endpoint: Normalized endpoint
             options: Generation options (count, domain_hint, seed, etc.)
+            progress_callback: Optional progress callback for reporting progress
 
         Returns:
             List of generated test cases

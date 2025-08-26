@@ -5,6 +5,7 @@ import logging
 from typing import Any, Dict, List
 
 from app.ai.base import get_provider, get_provider_for_speed
+from app.progress import create_progress_callback
 from app.ai.null_provider import NullProvider
 
 # Global semaphore to limit concurrent AI requests
@@ -136,7 +137,7 @@ async def generate_test_cases(
                 "speed": ai_speed,
             }
 
-            cases = await provider.generate_cases(endpoint, options)
+            cases = await provider.generate_cases(endpoint, options, None)  # No progress callback for sync generation
 
             # Validate and fix generated data
             for case in cases:
@@ -213,6 +214,9 @@ async def generate_test_cases_with_progress(
 ) -> Dict[str, Any]:
     """Generate test cases with real-time progress updates"""
     from app.main import update_progress
+    
+    # Create progress callback for WebSocket updates
+    progress_callback = create_progress_callback(task_id, update_progress)
 
     if outputs is None:
         outputs = ["junit", "python", "nodejs", "postman"]
@@ -250,7 +254,9 @@ async def generate_test_cases_with_progress(
 
         # Generate cases for this endpoint
         cases = await provider.generate_cases(
-            endpoint, {"count": cases_per_endpoint, "domain_hint": domain_hint, "speed": ai_speed, "task_id": task_id}
+            endpoint, 
+            {"count": cases_per_endpoint, "domain_hint": domain_hint, "speed": ai_speed}, 
+            progress_callback
         )
 
         endpoint_results.append(cases)

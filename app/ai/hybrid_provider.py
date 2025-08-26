@@ -9,6 +9,7 @@ from app.ai.null_provider import NullProvider
 from app.ai.openai_provider import OpenAIProvider
 from app.ai.fast_provider import FastAIProvider
 from app.ai.anthropic_provider import AnthropicProvider
+from app.progress import ProgressCallback
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ class HybridProvider(AIProvider):
         """Hybrid provider is always available (falls back to null)"""
         return True
 
-    async def generate_cases(self, endpoint: Any, options: Dict[str, Any]) -> List[TestCase]:
+    async def generate_cases(self, endpoint: Any, options: Dict[str, Any], progress_callback: Optional[ProgressCallback] = None) -> List[TestCase]:
         """
         Generate test cases using hybrid approach:
         1. Null provider generates foundation cases
@@ -55,7 +56,6 @@ class HybridProvider(AIProvider):
         """
         domain_hint = options.get("domain_hint", "")
         cases_per_endpoint = options.get("cases_per_endpoint", 5)
-        task_id = options.get("task_id")  # For progress updates
         
         # Safely access endpoint attributes
         method = getattr(endpoint, 'method', 'UNKNOWN')
@@ -65,68 +65,63 @@ class HybridProvider(AIProvider):
         logger.info(f"   Domain: {domain_hint}, Cases: {cases_per_endpoint}")
         
         # Step 1: Generate foundation cases with null provider
-        if task_id:
-            from app.main import update_progress
-            await update_progress(task_id, "generating", 40, f"Generating foundation cases for {method} {path}...")
+        if progress_callback:
+            await progress_callback.update("generating", 40, f"Generating foundation cases for {method} {path}...")
         
         logger.info("📝 Step 1: Generating foundation cases with null provider...")
-        foundation_cases = await self.null_provider.generate_cases(endpoint, options)
+        foundation_cases = await self.null_provider.generate_cases(endpoint, options, progress_callback)
         logger.info(f"✅ Generated {len(foundation_cases)} foundation cases")
         
         if not self.ai_provider:
             logger.warning("⚠️  No AI provider available, returning foundation cases only")
-            if task_id:
-                await update_progress(task_id, "generating", 80, f"Foundation cases complete ({len(foundation_cases)} cases)")
+            if progress_callback:
+                await progress_callback.update("generating", 80, f"Foundation cases complete ({len(foundation_cases)} cases)")
             return foundation_cases
         
         # Step 2: Enhance with AI
-        if task_id:
-            # Safely access endpoint attributes
-            method = getattr(endpoint, 'method', 'UNKNOWN')
-            path = getattr(endpoint, 'path', 'UNKNOWN')
-            await update_progress(task_id, "generating", 60, f"Enhancing cases with AI for {method} {path}...")
+        if progress_callback:
+            await progress_callback.update("generating", 60, f"Enhancing cases with AI for {method} {path}...")
         
         logger.info("🤖 Step 2: Enhancing cases with AI...")
-        enhanced_cases = await self._enhance_with_ai(foundation_cases, endpoint, domain_hint, task_id)
+        enhanced_cases = await self._enhance_with_ai(foundation_cases, endpoint, domain_hint, progress_callback)
         
         # Combine foundation and enhanced cases
         all_cases = foundation_cases + enhanced_cases
         
-        if task_id:
-            await update_progress(task_id, "generating", 80, f"Hybrid generation complete: {len(all_cases)} total cases")
+        if progress_callback:
+            await progress_callback.update("generating", 80, f"Hybrid generation complete: {len(all_cases)} total cases")
         
         logger.info(f"🎉 Hybrid generation complete: {len(all_cases)} total cases")
         
         return all_cases
 
-    async def _enhance_with_ai(self, foundation_cases: List[TestCase], endpoint: Any, domain_hint: str, task_id: str = None) -> List[TestCase]:
+    async def _enhance_with_ai(self, foundation_cases: List[TestCase], endpoint: Any, domain_hint: str, progress_callback: Optional[ProgressCallback] = None) -> List[TestCase]:
         """
         Send foundation cases to AI for enhancement with domain-specific values and edge cases
         """
         try:
             # Prepare the prompt for AI enhancement
-            if task_id:
-                from app.main import update_progress
+            if progress_callback:
                 # Safely access endpoint attributes
                 method = getattr(endpoint, 'method', 'UNKNOWN')
                 path = getattr(endpoint, 'path', 'UNKNOWN')
-                await update_progress(task_id, "generating", 65, f"Preparing AI enhancement prompt for {method} {path}...")
+                await progress_callback.update("generating", 65, f"Preparing AI enhancement prompt for {method} {path}...")
             
             prompt = self._build_enhancement_prompt(foundation_cases, endpoint, domain_hint)
             
             # Get AI response
-            if task_id:
+            if progress_callback:
                 method = getattr(endpoint, 'method', 'UNKNOWN')
                 path = getattr(endpoint, 'path', 'UNKNOWN')
-                await update_progress(task_id, "generating", 70, f"Calling AI for enhancement of {method} {path}...")
+                await progress_callback.update("generating", 70, f"Calling AI for enhancement of {method} {path}...")
             
             response = await self.ai_provider._call_ai(prompt)
             
             # Parse enhanced cases
-            if task_id:
+            if progress_callback:
                 method = getattr(endpoint, 'method', 'UNKNOWN')
                 path = getattr(endpoint, 'path', 'UNKNOWN')
-                await update_progress(task_id, "generating", 75, f"Parsing AI enhancement results for {method} {path}...")
+                await progress_callback.update("generating", 75, f"Parsing AI enhancement results for {method} {path}...")
             
             enhanced_cases = self._parse_enhanced_cases(response, endpoint)
             
@@ -144,11 +139,10 @@ class HybridProvider(AIProvider):
             except ImportError:
                 pass  # Sentry not available
             
-            if task_id:
-                from app.main import update_progress
+            if progress_callback:
                 method = getattr(endpoint, 'method', 'UNKNOWN')
                 path = getattr(endpoint, 'path', 'UNKNOWN')
-                await update_progress(task_id, "generating", 75, f"AI enhancement failed, using foundation cases only for {method} {path}")
+                await progress_callback.update("generating", 75, f"AI enhancement failed, using foundation cases only for {method} {path}")
             
             return []
 

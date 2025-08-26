@@ -5,6 +5,7 @@ import logging
 from typing import Any, Dict, List
 
 from app.ai.base import AIProvider, TestCase
+from app.progress import ProgressCallback
 from app.ai.prompts import get_test_generation_prompt, order_test_cases
 from app.config import settings
 from app.utils.json_repair import extract_json_from_content, safe_json_parse
@@ -42,7 +43,7 @@ class FastAIProvider(AIProvider):
         """Check if any fast AI provider is available"""
         return bool(self.openai_client or self.anthropic_client)
 
-    async def generate_cases(self, endpoint: Any, options: Dict[str, Any]) -> List[TestCase]:
+    async def generate_cases(self, endpoint: Any, options: Dict[str, Any], progress_callback: Optional[ProgressCallback] = None) -> List[TestCase]:
         """Generate test cases using the fastest available AI model"""
 
         # Try OpenAI first (gpt-4o-mini is fastest)
@@ -62,7 +63,7 @@ class FastAIProvider(AIProvider):
         # Fallback to null provider
         from app.ai.null_provider import NullProvider
 
-        return await NullProvider().generate_cases(endpoint, options)
+        return await NullProvider().generate_cases(endpoint, options, progress_callback)
 
     async def _generate_with_openai(self, endpoint: Any, options: Dict[str, Any]) -> List[TestCase]:
         """Generate using OpenAI with fastest settings"""
