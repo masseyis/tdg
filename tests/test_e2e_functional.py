@@ -400,6 +400,7 @@ class WebUIDriver:
             progress_messages = []
             last_progress = 0
             progress_update_count = 0
+            active_steps_seen = set()  # Track which visual steps we've seen active
             
             # Check for various completion indicators
             completion_indicators = [
@@ -459,6 +460,36 @@ class WebUIDriver:
                             logger.info("✅ Progress: Hybrid generation complete detected")
                         elif "creating zip" in current_message.lower():
                             logger.info("✅ Progress: ZIP creation detected")
+                        
+                        # Check for visual progress step indicators (colored dots)
+                        step_indicators = {
+                            "step1": "Processing OpenAPI specification",
+                            "step2": "Generating foundation test cases", 
+                            "step3": "Enhancing with AI intelligence",
+                            "step4": "Creating test artifacts & ZIP"
+                        }
+                        
+                        for step_id, step_text in step_indicators.items():
+                            try:
+                                step_element = self.driver.find_element(By.ID, step_id)
+                                dot_element = step_element.find_element(By.CSS_SELECTOR, "div.w-4.h-4.rounded-full")
+                                
+                                # Check if the dot is colored (teal) or gray
+                                dot_classes = dot_element.get_attribute("class")
+                                if "bg-teal-400" in dot_classes:
+                                    if step_id not in active_steps_seen:  # Track which steps we've seen
+                                        logger.info(f"🎯 Visual Progress: {step_text} - Step {step_id} is active (teal dot)")
+                                        active_steps_seen.add(step_id)
+                                        progress_update_count += 1
+                                elif "bg-gray-700" in dot_classes:
+                                    # Step is inactive (gray dot)
+                                    pass
+                                else:
+                                    logger.warning(f"⚠️  Unknown dot color for {step_id}: {dot_classes}")
+                                    
+                            except Exception as e:
+                                # Step element not found, continue
+                                pass
                         
                         # Fail if no progress updates for too long
                         if time.time() - start_time > 60 and progress_update_count == 0:
