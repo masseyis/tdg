@@ -278,6 +278,7 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
 
 @app.post("/api/generate")
 async def generate(request: GenerateRequest, background_tasks: BackgroundTasks = None):
+    logger.info("✅ /api/generate endpoint called - this is the correct async endpoint")
     """
     Generate test artifacts from OpenAPI spec - JSON API endpoint
 
@@ -499,6 +500,7 @@ async def generate_ui(
 
     TODO: Convert to asynchronous with WebSocket progress tracking
     """
+    logger.warning("🚨 /generate-ui endpoint called - this should NOT happen with async frontend!")
     async with request_semaphore:  # Limit concurrent requests
         try:
             logger.info(
