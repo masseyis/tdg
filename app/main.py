@@ -136,8 +136,8 @@ async def app_page(request: Request):
     )
 
 
-@app.get("/auth", response_class=HTMLResponse)
-async def auth_page(request: Request):
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
     """Render authentication page"""
     return templates.TemplateResponse("auth.html", {"request": request})
 
@@ -148,9 +148,9 @@ async def pricing_page(request: Request):
     return templates.TemplateResponse("pricing.html", {"request": request})
 
 
-@app.get("/docs", response_class=HTMLResponse)
-async def docs_page(request: Request):
-    """Render documentation page"""
+@app.get("/guide", response_class=HTMLResponse)
+async def guide_page(request: Request):
+    """Render user guide page"""
     return templates.TemplateResponse("docs.html", {"request": request})
 
 
