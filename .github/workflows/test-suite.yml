@@ -186,13 +186,16 @@ jobs:
         echo "Testing API generation endpoint..."
         echo '{"openapi":"3.0.0","info":{"title":"Test API","version":"1.0.0"},"paths":{"\/test":{"get":{"responses":{"200":{"description":"OK"}}}}}}' > /tmp/test-spec.json
         
-        # Test the generate-ui endpoint (more suitable for integration testing)
-        response=$(curl -s -w "%{http_code}" -X POST http://localhost:8000/generate-ui \
-          -F "file=@/tmp/test-spec.json" \
-          -F "outputs=json" \
-          -F "casesPerEndpoint=2" \
-          -F "domainHint=test" \
-          -F "aiSpeed=fast")
+        # Test the /api/generate endpoint (doesn't require authentication)
+        response=$(curl -s -w "%{http_code}" -X POST http://localhost:8000/api/generate \
+          -H "Content-Type: application/json" \
+          -d '{
+            "openapi_spec": "'$(base64 -w 0 /tmp/test-spec.json)'",
+            "cases_per_endpoint": 2,
+            "outputs": ["json"],
+            "domain_hint": "test",
+            "ai_speed": "fast"
+          }')
         
         http_code="${response: -3}"
         body="${response%???}"
