@@ -98,12 +98,40 @@
                 reason: e.reason,
                 timestamp: new Date().toISOString()
             });
-            console.error('Unhandled promise rejection:', e.reason);
             
             // Send to Sentry if available
             if (typeof Sentry !== 'undefined') {
                 Sentry.captureException(e.reason);
             }
+        });
+        
+        // Authentication check
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/auth/me', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (response.status === 401) {
+                    // Not authenticated, redirect to login
+                    window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+                    return false;
+                } else if (response.ok) {
+                    // Authenticated, continue
+                    return true;
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                // In case of error, assume not authenticated and redirect
+                window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+                return false;
+            }
+        }
+        
+        // Check authentication on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
         });
         
         tailwind.config = {

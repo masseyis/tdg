@@ -65,6 +65,7 @@ from typing import List, Optional
 
 from fastapi import (
     BackgroundTasks,
+    Depends,
     FastAPI,
     File,
     Form,
@@ -87,6 +88,7 @@ from app.utils.openapi_normalizer import normalize_openapi
 from app.utils.zipping import create_artifact_zip
 from app.websocket_manager import websocket_manager
 from app.auth.routes import router as auth_router
+from app.auth.middleware import require_auth_or_dev, check_generation_limit
 from app.sentry import init_sentry, capture_exception, set_tag
 
 request_semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
@@ -126,14 +128,58 @@ async def index(request: Request):
 @app.get("/app", response_class=HTMLResponse)
 async def app_page(request: Request):
     """Render app page"""
-    return templates.TemplateResponse(
-        "app.html",
-        {
-            "request": request,
-            "sentry_dsn": settings.sentry_dsn,
-            "sentry_environment": settings.sentry_environment,
-        },
-    )
+    logger.info(f"🔍 App page requested. DISABLE_AUTH_FOR_DEV: {settings.disable_auth_for_dev}")
+    
+    # Check if authentication is disabled for development
+    if settings.disable_auth_for_dev:
+        logger.info("🔓 Development mode: Authentication bypassed for app page")
+        return templates.TemplateResponse(
+            "app.html",
+            {
+                "request": request,
+                "sentry_dsn": settings.sentry_dsn,
+                "sentry_environment": settings.sentry_environment,
+            },
+        )
+    
+    # Check for authentication token
+    auth_header = request.headers.get("authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        # No token, redirect to login
+        from fastapi.responses import RedirectResponse
+        redirect_url = f"/login?redirect={request.url.path}"
+        return RedirectResponse(url=redirect_url, status_code=302)
+    
+    # Verify token
+    try:
+        from app.auth.middleware import get_current_user
+        from app.auth.clerk_auth import get_clerk_auth
+        
+        token = auth_header.split(" ")[1]
+        clerk_auth = get_clerk_auth()
+        token_payload = clerk_auth.verify_jwt(token)
+        
+        if not token_payload:
+            # Invalid token, redirect to login
+            from fastapi.responses import RedirectResponse
+            redirect_url = f"/login?redirect={request.url.path}"
+            return RedirectResponse(url=redirect_url, status_code=302)
+        
+        # Valid token, render app page
+        return templates.TemplateResponse(
+            "app.html",
+            {
+                "request": request,
+                "sentry_dsn": settings.sentry_dsn,
+                "sentry_environment": settings.sentry_environment,
+            },
+        )
+    except Exception as e:
+        logger.error(f"Authentication error: {e}")
+        # Error, redirect to login
+        from fastapi.responses import RedirectResponse
+        redirect_url = f"/login?redirect={request.url.path}"
+        return RedirectResponse(url=redirect_url, status_code=302)
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -311,7 +357,11 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
 
 
 @app.post("/api/generate")
-async def generate(request: GenerateRequest, background_tasks: BackgroundTasks):
+async def generate(
+    request: GenerateRequest, 
+    background_tasks: BackgroundTasks,
+    current_user = Depends(require_auth_or_dev)
+):
     """
     Generate test artifacts from OpenAPI spec - JSON API endpoint
     
@@ -502,6 +552,7 @@ async def generate_ui(
     domainHint: Optional[str] = Form(None),
     seed: Optional[int] = Form(None),
     aiSpeed: str = Form("fast"),
+    current_user = Depends(require_auth_or_dev),
 ):
     """
     Handle form submission from UI - ASYNCHRONOUS with WebSocket progress tracking

@@ -88,9 +88,9 @@ class WebService:
             sock.close()
             
             if result == 0:
-                # Port is in use, assume service is already running
-                logger.info(f"✅ Port {self.port} is already in use, assuming service is running")
-                return True
+                # Port is in use, but for tests we want to start a fresh service
+                logger.info(f"⚠️  Port {self.port} is already in use, but starting fresh service for tests")
+                # Don't return True, continue to start the service
             else:
                 # Port is free, start the service
                 logger.info(f"🚀 Starting web service on port {self.port}")
@@ -98,6 +98,7 @@ class WebService:
                 # Set environment variables
                 env = os.environ.copy()
                 env['PYTHONPATH'] = os.getcwd()
+                env['DISABLE_AUTH_FOR_DEV'] = 'true'  # Disable auth for tests
                 
                 # Start uvicorn as a subprocess
                 self.process = subprocess.Popen([
@@ -106,6 +107,32 @@ class WebService:
                     '--port', str(self.port),
                     '--reload'
                 ], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                
+                # Give server time to start and check for errors
+                time.sleep(3)
+                if self.process.poll() is not None:
+                    # Process died, get the output
+                    stdout, stderr = self.process.communicate()
+                    logger.error(f"❌ Server failed to start. Exit code: {self.process.returncode}")
+                    logger.error(f"Stdout: {stdout.decode()}")
+                    logger.error(f"Stderr: {stderr.decode()}")
+                    return False
+                
+                # Check server output for debugging
+                time.sleep(2)  # Give server time to start
+                if self.process.poll() is None:  # Process is still running
+                    # Try to read some output
+                    try:
+                        stdout, stderr = self.process.communicate(timeout=1)
+                        if stdout:
+                            logger.info(f"Server stdout: {stdout.decode()[:200]}...")
+                        if stderr:
+                            logger.info(f"Server stderr: {stderr.decode()[:200]}...")
+                    except subprocess.TimeoutExpired:
+                        pass  # Process is still running, which is good
+                
+                # Log environment variables for debugging
+                logger.info(f"🔧 Server environment: DISABLE_AUTH_FOR_DEV={env.get('DISABLE_AUTH_FOR_DEV', 'NOT_SET')}")
                 
                 # Wait for service to start
                 logger.info("⏳ Waiting for service to start...")

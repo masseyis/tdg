@@ -70,6 +70,42 @@ async def require_auth(
     return current_user
 
 
+async def require_auth_or_dev(
+    current_user: Optional[UserProfile] = Depends(get_current_user),
+    request: Request = None
+) -> Optional[UserProfile]:
+    """
+    Require authentication for protected routes, but allow bypass in development.
+    
+    Args:
+        current_user: Current user from JWT token
+        request: FastAPI request object
+        
+    Returns:
+        UserProfile if authenticated, None if in dev mode
+        
+    Raises:
+        HTTPException: If not authenticated and not in dev mode
+    """
+    from app.config import settings
+    
+    # Allow bypass in development mode
+    if settings.disable_auth_for_dev:
+        logger.info("🔓 Development mode: Authentication bypassed")
+        return None
+    
+    if not current_user:
+        # Check if this is an HTML request (browser navigation)
+        if request and "text/html" in request.headers.get("accept", ""):
+            from fastapi.responses import RedirectResponse
+            redirect_url = f"/login?redirect={request.url.path}"
+            raise HTTPException(status_code=302, detail=f"Redirect to {redirect_url}")
+        else:
+            raise HTTPException(status_code=401, detail="Authentication required")
+    
+    return current_user
+
+
 async def get_user_subscription(
     current_user: UserProfile = Depends(require_auth)
 ) -> SubscriptionTier:

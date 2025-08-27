@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     clerk_issuer: str = "https://clerk.your-domain.com"
     clerk_secret_key: Optional[str] = None
     clerk_webhook_secret: Optional[str] = None
+    
+    # Development settings
+    disable_auth_for_dev: bool = os.getenv("DISABLE_AUTH_FOR_DEV", "false").lower() == "true"
 
     class Config:
         env_file = ".env"

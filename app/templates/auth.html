@@ -234,8 +234,29 @@
             window.location.href = '/pricing';
         }
         
+        // Handle redirect after successful authentication
+        function handleRedirect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirect = urlParams.get('redirect');
+            if (redirect) {
+                window.location.href = redirect;
+            } else {
+                window.location.href = '/app';
+            }
+        }
+        
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', checkAuthStatus);
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+            
+            // Check if we're returning from OAuth (URL contains auth token)
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            if (token) {
+                localStorage.setItem('clerk_token', token);
+                handleRedirect();
+            }
+        });
     </script>
 </body>
 </html>
