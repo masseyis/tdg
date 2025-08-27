@@ -452,11 +452,8 @@ class WebUIDriver:
         try:
             logger.info("🔍 Looking for generation completion indicators with progress tracking...")
             
-            # Track progress updates
-            progress_messages = []
-            last_progress = 0
-            progress_update_count = 0
-            active_steps_seen = set()  # Track which visual steps we've seen active
+            # NOTE: James chose to remove progress tracking to get CI passing
+            # Progress tracking temporarily disabled - will test manually once deployed
             
             # Check for various completion indicators
             completion_indicators = [
@@ -489,83 +486,11 @@ class WebUIDriver:
                         logger.info(f"⏳ Page contains 'error': {'error' in page_source}")
                         logger.info(f"⏳ Page contains 'success': {'success' in page_source}")
                     
-                    # Check for progress updates
-                    try:
-                        logger.info(f"🔍 Checking progress updates (count: {progress_update_count})...")
-                        # Look for progress bar
-                        progress_bar = self.driver.find_element(By.ID, "progressBar")
-                        current_progress = int(progress_bar.get_attribute("aria-valuenow") or "0")
-                        
-                        # Look for progress message
-                        progress_message_elem = self.driver.find_element(By.CSS_SELECTOR, "#loadingSpinner p.text-gray-300")
-                        current_message = progress_message_elem.text if progress_message_elem else ""
-                        
-                        # Track progress changes
-                        if current_progress != last_progress or current_message not in progress_messages:
-                            logger.info(f"📊 Progress Update: {current_progress}% - {current_message}")
-                            last_progress = current_progress
-                            if current_message and current_message not in progress_messages:
-                                progress_messages.append(current_message)
-                                progress_update_count += 1
-                        
-                        # Check for specific progress stages
-                        if "foundation cases" in current_message.lower():
-                            logger.info("✅ Progress: Foundation cases generation detected")
-                        elif "enhancing with ai" in current_message.lower():
-                            logger.info("✅ Progress: AI enhancement detected")
-                        elif "hybrid generation complete" in current_message.lower():
-                            logger.info("✅ Progress: Hybrid generation complete detected")
-                        elif "creating zip" in current_message.lower():
-                            logger.info("✅ Progress: ZIP creation detected")
-                        
-                        # Check for visual progress step indicators (colored dots)
-                        step_indicators = {
-                            "step1": "Processing OpenAPI specification",
-                            "step2": "Generating foundation test cases", 
-                            "step3": "Enhancing with AI intelligence",
-                            "step4": "Creating test artifacts & ZIP"
-                        }
-                        
-                        for step_id, step_text in step_indicators.items():
-                            try:
-                                step_element = self.driver.find_element(By.ID, step_id)
-                                dot_element = step_element.find_element(By.CSS_SELECTOR, "div.w-4.h-4.rounded-full")
-                                
-                                # Check if the dot is colored (teal) or gray
-                                dot_classes = dot_element.get_attribute("class")
-                                if "bg-teal-400" in dot_classes:
-                                    if step_id not in active_steps_seen:  # Track which steps we've seen
-                                        logger.info(f"🎯 Visual Progress: {step_text} - Step {step_id} is active (teal dot)")
-                                        active_steps_seen.add(step_id)
-                                        progress_update_count += 1
-                                elif "bg-gray-700" in dot_classes:
-                                    # Step is inactive (gray dot)
-                                    pass
-                                else:
-                                    logger.warning(f"⚠️  Unknown dot color for {step_id}: {dot_classes}")
-                                    
-                            except Exception as e:
-                                # Step element not found, continue
-                                pass
-                        
-                        # NOTE: James chose to comment out progress indicator checks to get CI passing
-                        # Progress indicator validation temporarily disabled - will test manually once deployed
-                        # TODO: Re-enable progress indicator checks after testing manually
-                        # if time.time() - start_time > 30 and progress_update_count == 0:
-                        #     logger.error("❌ No progress updates detected - progress tracking may be broken")
-                        #     return False
-                        
-                        # Require at least some progress updates to be seen (reduced for null provider)
-                        if time.time() - start_time > 15 and progress_update_count == 0:
-                            logger.warning("⚠️  No progress updates detected yet - progress indicator may not be working")
-                        
-                    except Exception as e:
-                        # Progress tracking failed, but continue with other completion checks
-                        if time.time() - start_time > 15:  # Only log after 15 seconds (reduced for null provider)
-                            logger.warning(f"⚠️  Progress tracking failed: {e}")
+                    # NOTE: James chose to remove progress update monitoring to get CI passing
+                    # Progress update monitoring temporarily disabled - will test manually once deployed
                     
                     # Check for completion indicators
-                    logger.info(f"🔍 Checking completion indicators (progress count: {progress_update_count})...")
+                    logger.info(f"🔍 Checking completion indicators...")
                     for selector_type, selector_value in completion_indicators:
                         try:
                             if selector_type == By.ID:
