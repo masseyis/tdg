@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Guide - SpecMint</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="apple-touch-icon" href="/static/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-gray-950 text-white">
+    <!-- Navigation -->
+    <nav class="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center">
+                        <img src="/static/logo.png" alt="SpecMint" class="h-12 w-auto">
+                    </a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="/#product" class="text-gray-300 hover:text-white transition-colors">Product</a>
+                        <a href="/docs" class="text-teal-400 font-medium">Docs</a>
+                        <a href="/pricing" class="text-gray-300 hover:text-white transition-colors">Pricing</a>
+                        <a href="https://github.com/masseyis/tdg" class="text-gray-300 hover:text-white transition-colors">GitHub</a>
+                    </div>
+                </div>
+                <a href="/app" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition-colors">Generate test data</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold font-space-grotesk mb-4">SpecMint User Guide</h1>
+            <p class="text-xl text-gray-300">Learn how to generate comprehensive test cases from your OpenAPI specifications</p>
+        </div>
+        
+        <div class="mb-8">
+            <img src="/static/screenshots/landing-page.png" alt="SpecMint Landing Page" class="w-full rounded-lg border border-gray-700">
+            <p class="text-sm text-gray-500 mt-2 text-center">Welcome to SpecMint - Your API testing companion</p>
+        </div>
+
+        <!-- Table of Contents -->
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-8">
+            <h2 class="text-2xl font-bold font-space-grotesk mb-4">Table of Contents</h2>
+            <ul class="space-y-2 text-gray-300">
+                <li><a href="#getting-started" class="text-teal-400 hover:text-teal-300 transition-colors">1. Getting Started</a></li>
+                <li><a href="#uploading-specs" class="text-teal-400 hover:text-teal-300 transition-colors">2. Uploading Your OpenAPI Specification</a></li>
+                <li><a href="#configuration" class="text-teal-400 hover:text-teal-300 transition-colors">3. Configuration Options</a></li>
+                <li><a href="#generation" class="text-teal-400 hover:text-teal-300 transition-colors">4. Generation Process</a></li>
+                <li><a href="#outputs" class="text-teal-400 hover:text-teal-300 transition-colors">5. Understanding Your Outputs</a></li>
+                <li><a href="#best-practices" class="text-teal-400 hover:text-teal-300 transition-colors">6. Best Practices</a></li>
+                <li><a href="#troubleshooting" class="text-teal-400 hover:text-teal-300 transition-colors">7. Troubleshooting</a></li>
+            </ul>
+        </div>
+
+        <!-- Getting Started -->
+        <section id="getting-started" class="mb-12">
+            <h2 class="text-3xl font-bold font-space-grotesk mb-6">1. Getting Started</h2>
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <p class="text-gray-300 mb-4">
+                    SpecMint is a powerful tool that generates comprehensive test cases and artifacts from your OpenAPI specifications. 
+                    Whether you're testing APIs manually or setting up automated testing pipelines, SpecMint provides the foundation you need.
+                </p>
+                <div class="bg-teal-900/20 border border-teal-800 rounded-lg p-4 mb-4">
+                    <h3 class="text-teal-400 font-semibold mb-2">What You'll Get</h3>
+                    <ul class="text-gray-300 space-y-1">
+                        <li>• Valid, boundary, and negative test cases</li>
+                        <li>• JUnit/REST Assured test suites</li>
+                        <li>• Postman collections</li>
+                        <li>• WireMock stubs</li>
+                        <li>• Realistic test datasets</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Uploading Specs -->
+        <section id="uploading-specs" class="mb-12">
+            <h2 class="text-3xl font-bold font-space-grotesk mb-6">2. Uploading Your OpenAPI Specification</h2>
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <p class="text-gray-300 mb-6">
+                    Start by navigating to the <a href="/app" class="text-teal-400 hover:text-teal-300">Generate Test Cases</a> page. 
+                    You can upload your OpenAPI specification in two ways:
+                </p>
+                
+                <div class="mb-6">
+                    <img src="/static/screenshots/app-page.png" alt="SpecMint App Interface" class="w-full rounded-lg border border-gray-700">
+                    <p class="text-sm text-gray-500 mt-2 text-center">The main SpecMint interface for uploading and configuring test generation</p>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">File Upload</h3>
+                        <p class="text-gray-300 text-sm mb-3">
+                            Drag and drop your OpenAPI specification file directly onto the upload area, or click to browse and select a file.
+                        </p>
+                        <div class="text-xs text-gray-500">
+                            Supported formats: .json, .yaml, .yml
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">URL Input</h3>
+                        <p class="text-gray-300 text-sm mb-3">
+                            Provide a direct URL to your OpenAPI specification if it's hosted online.
+                        </p>
+                        <div class="text-xs text-gray-500">
+                            Example: https://api.example.com/openapi.json
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-blue-900/20 border border-blue-800 rounded-lg p-4">
+                    <h3 class="text-blue-400 font-semibold mb-2">📋 Supported OpenAPI Versions</h3>
+                    <p class="text-gray-300 text-sm">
+                        SpecMint supports both OpenAPI 3.0 and 3.1 specifications, including all major features and extensions.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Configuration -->
+        <section id="configuration" class="mb-12">
+            <h2 class="text-3xl font-bold font-space-grotesk mb-6">3. Configuration Options</h2>
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <p class="text-gray-300 mb-6">
+                    Customize your test generation with these configuration options:
+                </p>
+
+                <div class="space-y-6">
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">Test Cases per Endpoint</h3>
+                        <p class="text-gray-300 text-sm mb-2">
+                            Choose how many test cases to generate for each API endpoint. More cases provide better coverage but take longer to generate.
+                        </p>
+                        <div class="text-xs text-gray-500">
+                            Options: 5, 10, 15, 20, 50, 100, 200, 500 cases
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">Domain Hint</h3>
+                        <p class="text-gray-300 text-sm mb-2">
+                            Help SpecMint generate more relevant test data by specifying your domain or industry.
+                        </p>
+                        <div class="text-xs text-gray-500">
+                            Options: General, Pet Store, E-commerce, User Management, Financial, Healthcare, Social Media, Custom
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">AI Generation Speed</h3>
+                        <p class="text-gray-300 text-sm mb-2">
+                            Balance between generation speed and test quality.
+                        </p>
+                        <div class="text-xs text-gray-500">
+                            Fast (2-5s): Quick generation with good coverage<br>
+                            Balanced (5-10s): Optimal speed/quality balance<br>
+                            Best Quality (10-20s): Maximum test sophistication
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Generation Process -->
+        <section id="generation" class="mb-12">
+            <h2 class="text-3xl font-bold font-space-grotesk mb-6">4. Generation Process</h2>
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <p class="text-gray-300 mb-6">
+                    Once you've uploaded your specification and configured your options, click "Generate Test Cases" to start the process.
+                </p>
+
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold">1</div>
+                        <div>
+                            <h3 class="text-teal-400 font-semibold">Processing OpenAPI Specification</h3>
+                            <p class="text-gray-300 text-sm">Validating and parsing your specification</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <div class="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold">2</div>
+                        <div>
+                            <h3 class="text-teal-400 font-semibold">Generating Foundation Test Cases</h3>
+                            <p class="text-gray-300 text-sm">Creating base test scenarios for each endpoint</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <div class="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold">3</div>
+                        <div>
+                            <h3 class="text-teal-400 font-semibold">Enhancing with AI</h3>
+                            <p class="text-gray-300 text-sm">Adding domain-specific values and edge cases</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <div class="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold">4</div>
+                        <div>
+                            <h3 class="text-teal-400 font-semibold">Rendering Output Formats</h3>
+                            <p class="text-gray-300 text-sm">Generating JUnit, Postman, and other artifacts</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <div class="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold">5</div>
+                        <div>
+                            <h3 class="text-teal-400 font-semibold">Creating Download Package</h3>
+                            <p class="text-gray-300 text-sm">Packaging all outputs into a ZIP file</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-yellow-900/20 border border-yellow-800 rounded-lg p-4 mt-6">
+                    <h3 class="text-yellow-400 font-semibold mb-2">⏱️ Generation Time</h3>
+                    <p class="text-gray-300 text-sm">
+                        Generation typically takes 5-30 seconds depending on your configuration and the complexity of your API specification.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Outputs -->
+        <section id="outputs" class="mb-12">
+            <h2 class="text-3xl font-bold font-space-grotesk mb-6">5. Understanding Your Outputs</h2>
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <p class="text-gray-300 mb-6">
+                    SpecMint generates a comprehensive set of test artifacts packaged in a ZIP file:
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">JUnit/REST Assured Tests</h3>
+                        <p class="text-gray-300 text-sm mb-2">
+                            Ready-to-run Java test classes with REST Assured for API testing.
+                        </p>
+                        <div class="text-xs text-gray-500">
+                            Includes valid, boundary, and negative test scenarios
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">Postman Collection</h3>
+                        <p class="text-gray-300 text-sm mb-2">
+                            Importable Postman collection with all test cases and environments.
+                        </p>
+                        <div class="text-xs text-gray-500">
+                            Ready for manual testing and team collaboration
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">WireMock Stubs</h3>
+                        <p class="text-gray-300 text-sm mb-2">
+                            Mock responses for integration testing and development.
+                        </p>
+                        <div class="text-xs text-gray-500">
+                            Perfect for frontend development and CI/CD pipelines
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">Test Datasets</h3>
+                        <p class="text-gray-300 text-sm mb-2">
+                            Realistic test data in JSON format for each endpoint.
+                        </p>
+                        <div class="text-xs text-gray-500">
+                            Domain-relevant sample data for comprehensive testing
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Best Practices -->
+        <section id="best-practices" class="mb-12">
+            <h2 class="text-3xl font-bold font-space-grotesk mb-6">6. Best Practices</h2>
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <div class="space-y-4">
+                    <div class="bg-green-900/20 border border-green-800 rounded-lg p-4">
+                        <h3 class="text-green-400 font-semibold mb-2">✅ Do's</h3>
+                        <ul class="text-gray-300 text-sm space-y-1">
+                            <li>• Use the most recent version of your OpenAPI specification</li>
+                            <li>• Provide domain hints for more relevant test data</li>
+                            <li>• Start with 10-20 test cases per endpoint for initial testing</li>
+                            <li>• Review generated tests before implementing in production</li>
+                            <li>• Use the generated datasets as a foundation for your test environment</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-red-900/20 border border-red-800 rounded-lg p-4">
+                        <h3 class="text-red-400 font-semibold mb-2">❌ Don'ts</h3>
+                        <ul class="text-gray-300 text-sm space-y-1">
+                            <li>• Don't rely solely on generated tests without review</li>
+                            <li>• Don't use outdated or incomplete OpenAPI specifications</li>
+                            <li>• Don't generate 500+ test cases unless you have specific coverage needs</li>
+                            <li>• Don't skip the domain hint - it significantly improves test quality</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Troubleshooting -->
+        <section id="troubleshooting" class="mb-12">
+            <h2 class="text-3xl font-bold font-space-grotesk mb-6">7. Troubleshooting</h2>
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <div class="space-y-6">
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">Upload Issues</h3>
+                        <p class="text-gray-300 text-sm mb-2">
+                            <strong>Problem:</strong> File upload fails or specification isn't recognized
+                        </p>
+                        <p class="text-gray-300 text-sm">
+                            <strong>Solution:</strong> Ensure your file is a valid OpenAPI 3.0 or 3.1 specification in JSON or YAML format. 
+                            Check that the file isn't corrupted and contains valid OpenAPI syntax.
+                        </p>
+                    </div>
+
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">Generation Timeouts</h3>
+                        <p class="text-gray-300 text-sm mb-2">
+                            <strong>Problem:</strong> Generation process takes too long or times out
+                        </p>
+                        <p class="text-gray-300 text-sm">
+                            <strong>Solution:</strong> Try reducing the number of test cases per endpoint or use the "Fast" AI speed setting. 
+                            Large specifications with many endpoints may take longer to process.
+                        </p>
+                    </div>
+
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">Poor Test Quality</h3>
+                        <p class="text-gray-300 text-sm mb-2">
+                            <strong>Problem:</strong> Generated tests seem generic or not relevant to your domain
+                        </p>
+                        <p class="text-gray-300 text-sm">
+                            <strong>Solution:</strong> Use the domain hint feature to specify your industry or domain. 
+                            This helps generate more relevant test data and scenarios.
+                        </p>
+                    </div>
+
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">Download Issues</h3>
+                        <p class="text-gray-300 text-sm mb-2">
+                            <strong>Problem:</strong> Can't download the generated ZIP file
+                        </p>
+                        <p class="text-gray-300 text-sm">
+                            <strong>Solution:</strong> Check your browser's download settings and ensure pop-up blockers aren't preventing the download. 
+                            Try using a different browser if the issue persists.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Section -->
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold font-space-grotesk mb-6">Pricing Plans</h2>
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                <p class="text-gray-300 mb-6">
+                    SpecMint offers flexible pricing plans to suit your testing needs:
+                </p>
+                
+                <div class="mb-6">
+                    <img src="/static/screenshots/pricing-page.png" alt="SpecMint Pricing Plans" class="w-full rounded-lg border border-gray-700">
+                    <p class="text-sm text-gray-500 mt-2 text-center">Choose the plan that fits your testing requirements</p>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">Free Plan</h3>
+                        <p class="text-gray-300 text-sm mb-2">Perfect for getting started with API testing</p>
+                        <ul class="text-gray-300 text-sm space-y-1">
+                            <li>• 5 generations per month</li>
+                            <li>• Up to 20 endpoints</li>
+                            <li>• Basic test cases</li>
+                            <li>• Community support</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                        <h3 class="text-teal-400 font-semibold mb-2">Paid Plans</h3>
+                        <p class="text-gray-300 text-sm mb-2">Advanced features for professional teams</p>
+                        <ul class="text-gray-300 text-sm space-y-1">
+                            <li>• 50+ generations per month</li>
+                            <li>• Up to 100+ endpoints</li>
+                            <li>• Enhanced test cases</li>
+                            <li>• Priority support</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Call to Action -->
+        <div class="text-center mt-12">
+            <h2 class="text-2xl font-bold font-space-grotesk mb-4">Ready to Generate Your Test Cases?</h2>
+            <p class="text-gray-300 mb-6">Start creating comprehensive test coverage for your APIs today.</p>
+            <a href="/app" class="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-lg text-lg font-medium transition-colors">
+                Generate Test Cases
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 py-8 px-4 sm:px-6 lg:px-8 mt-16">
+        <div class="max-w-7xl mx-auto text-center">
+            <p class="text-gray-400">&copy; 2024 SpecMint. Open source and free to use.</p>
+        </div>
+    </footer>
+</body>
+</html>

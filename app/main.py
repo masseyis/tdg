@@ -148,6 +148,12 @@ async def pricing_page(request: Request):
     return templates.TemplateResponse("pricing.html", {"request": request})
 
 
+@app.get("/docs", response_class=HTMLResponse)
+async def docs_page(request: Request):
+    """Render documentation page"""
+    return templates.TemplateResponse("docs.html", {"request": request})
+
+
 @app.post("/app", response_class=HTMLResponse)
 async def app_page_post(request: Request):
     """Handle form submission from app page"""

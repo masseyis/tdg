@@ -78,6 +78,7 @@ For any significant architectural change:
    - API documentation
    - Deployment guides
    - User guides
+   - **ALWAYS update user guide screenshots** when UI changes are made
 
 ## 🔄 Workflow Requirements
 
@@ -122,6 +123,13 @@ For any significant architectural change:
 - Validate end-to-end functionality
 
 ## 📝 Documentation Standards
+
+### User Guide Maintenance
+- **ALWAYS update screenshots** when UI changes are made
+- **Run `python capture_screenshots.py`** to capture new screenshots
+- **Update relevant sections** in `app/templates/docs.html` when functionality changes
+- **Keep screenshots current** - outdated screenshots confuse users
+- **Test the user guide** - ensure all links work and content is accurate
 
 ### Architectural Changes
 - Clear summary of what changed
