@@ -39,12 +39,12 @@ async def get_current_user(
     try:
         # Check if this is a mock token for testing
         if credentials.credentials.startswith("mock-jwt-"):
-            if hasattr(request.app.state, 'mock_users'):
+            if hasattr(request.app.state, "mock_users"):
                 mock_user_data = request.app.state.mock_users.get(credentials.credentials)
                 if mock_user_data:
                     logger.info(f"Using mock token for user: {mock_user_data['user'].user_id}")
-                    return mock_user_data['user']
-            
+                    return mock_user_data["user"]
+
             # Mock token not found or invalid
             raise HTTPException(status_code=401, detail="Invalid mock token")
 
