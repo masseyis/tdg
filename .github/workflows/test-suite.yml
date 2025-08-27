@@ -101,50 +101,9 @@ jobs:
         flake8 app/ --max-line-length=88 --extend-ignore=E203,W503,E501,E302,E303,E304,E305,E114,E116,E117,E261,E262,E266,F401,F541,E301,E127,W291 || echo "Linting issues found but continuing..."
         black --check app/ || echo "Black formatting issues found but continuing..."
         
-  # CRITICAL: E2E test must run on every push and deployment
+  # CRITICAL: E2E test is now included in comprehensive-test-suite
   # This validates the complete user journey through the UI
-  e2e-functional-test:
-    runs-on: ubuntu-latest
-    needs: [comprehensive-test-suite]
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-        
-    - name: Set up Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '11'
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        
-    - name: Run end-to-end functional test
-      run: |
-        echo "🎯 CRITICAL: Running E2E test - validates complete user journey"
-        echo "⚠️  This test must pass before any deployment!"
-        echo "🔍 Testing: File upload → Generation → Download → Test execution"
-        
-        python -m pytest tests/test_e2e_functional.py::test_complete_user_experience \
-          -v -s --log-cli-level=INFO \
-          --junit-xml=e2e-test-results.xml
-        
-        echo "✅ E2E test completed successfully"
-        
-    - name: Upload E2E test results
-      uses: actions/upload-artifact@v4
-      with:
-        name: e2e-test-results-${{ github.run_number }}
-        path: e2e-test-results.xml
-        retention-days: 90
+  # No separate job needed - avoids duplicate test execution
 
   # Integration tests against local server
   integration-tests:
