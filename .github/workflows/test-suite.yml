@@ -143,13 +143,8 @@ jobs:
       run: |
         echo "🚀 Starting test server for integration tests..."
         echo "⚠️  NON-NEGOTIABLE: Integration tests must pass for git pushes"
-        
-        # Set environment variable BEFORE starting the server
-        export DISABLE_AUTH_FOR_DEV=true
-        echo "🔓 Setting DISABLE_AUTH_FOR_DEV=$DISABLE_AUTH_FOR_DEV"
-        
         # Start the server in the background with proper logging and auth disabled for testing
-        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info > server.log 2>&1 &
+        DISABLE_AUTH_FOR_DEV=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info > server.log 2>&1 &
         SERVER_PID=$!
         
         # Wait for server to start and be ready
@@ -191,7 +186,12 @@ jobs:
         echo "Testing API generation endpoint..."
         echo '{"openapi":"3.0.0","info":{"title":"Test API","version":"1.0.0"},"paths":{"\/test":{"get":{"responses":{"200":{"description":"OK"}}}}}}' > /tmp/test-spec.json
         
-        # Test the generate-ui endpoint (more suitable for integration testing)
+        # First test the auth bypass endpoint to verify DISABLE_AUTH_FOR_DEV is working
+        echo "Testing authentication bypass..."
+        auth_response=$(curl -s http://localhost:8000/test-auth-bypass)
+        echo "Auth bypass response: $auth_response"
+        
+        # Test the generate-ui endpoint (should work with auth bypass)
         response=$(curl -s -w "%{http_code}" -X POST http://localhost:8000/generate-ui \
           -F "file=@/tmp/test-spec.json" \
           -F "outputs=json" \

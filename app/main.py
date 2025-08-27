@@ -62,6 +62,7 @@ import logging
 import tempfile
 from pathlib import Path
 from typing import List, Optional
+import time
 
 from fastapi import (
     BackgroundTasks,
@@ -188,9 +189,30 @@ async def app_page_post(request: Request):
 
 
 @app.get("/health")
-async def health():
+async def health_check():
     """Health check endpoint"""
-    return "OK"
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "version": "0.1.0",
+        "environment": settings.sentry_environment,
+    }
+
+
+@app.get("/test-auth-bypass")
+async def test_auth_bypass():
+    """
+    Test endpoint to verify authentication bypass is working.
+    
+    This endpoint is only for testing and should not be used in production.
+    """
+    from app.config import settings
+    
+    return {
+        "message": "Authentication bypass test",
+        "disable_auth_for_dev": settings.disable_auth_for_dev,
+        "timestamp": time.time()
+    }
 
 
 @app.get("/sentry-debug")
