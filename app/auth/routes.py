@@ -156,7 +156,7 @@ async def get_current_user_info(current_user: Optional[UserProfile] = Depends(re
 async def github_oauth():
     """
     Redirect to Clerk's GitHub OAuth.
-    
+
     In a real implementation, this would redirect to Clerk's OAuth flow.
     For now, we'll redirect to a mock authentication page for testing.
     """
@@ -169,7 +169,7 @@ async def github_oauth():
 async def google_oauth():
     """
     Redirect to Clerk's Google OAuth.
-    
+
     In a real implementation, this would redirect to Clerk's OAuth flow.
     For now, we'll redirect to a mock authentication page for testing.
     """
@@ -182,7 +182,7 @@ async def google_oauth():
 async def apple_oauth():
     """
     Redirect to Clerk's Apple OAuth.
-    
+
     In a real implementation, this would redirect to Clerk's OAuth flow.
     For now, we'll redirect to a mock authentication page for testing.
     """
@@ -195,21 +195,21 @@ async def apple_oauth():
 async def mock_auth_success(request: Request):
     """
     Mock authentication success page for testing OAuth flows.
-    
+
     This endpoint simulates a successful OAuth authentication and
     provides a mock JWT token for testing purposes.
     """
     provider = request.query_params.get("provider", "unknown")
-    
+
     # Create a mock user profile for testing
     mock_user = UserProfile(
         user_id=f"test-{provider}-user",
         email=f"test-{provider}@example.com",
         first_name="Test",
         last_name=provider.capitalize(),
-        image_url=""
+        image_url="",
     )
-    
+
     # Create mock subscription and usage
     subscription = SUBSCRIPTION_TIERS["free"]
     usage = UsageMetrics(
@@ -224,20 +224,20 @@ async def mock_auth_success(request: Request):
         storage_used_mb=0.0,
         storage_limit_mb=subscription.limits["storage_mb"],
     )
-    
+
     # Create a mock JWT token (in real implementation, this would come from Clerk)
     mock_token = f"mock-jwt-{provider}-{mock_user.user_id}"
-    
+
     # Store mock user data temporarily (in real implementation, this would be in a database)
     # For now, we'll use a simple in-memory store
-    if not hasattr(request.app.state, 'mock_users'):
+    if not hasattr(request.app.state, "mock_users"):
         request.app.state.mock_users = {}
     request.app.state.mock_users[mock_token] = {
         "user": mock_user,
         "subscription": subscription,
-        "usage": usage
+        "usage": usage,
     }
-    
+
     # Return HTML page that will set the token and redirect
     html_content = f"""
     <!DOCTYPE html>
@@ -257,7 +257,7 @@ async def mock_auth_success(request: Request):
         <script>
             // Set the mock token in localStorage
             localStorage.setItem('clerk_token', '{mock_token}');
-            
+
             // Redirect to the app
             setTimeout(() => {{
                 window.location.href = '/app';
@@ -266,7 +266,7 @@ async def mock_auth_success(request: Request):
     </body>
     </html>
     """
-    
+
     return HTMLResponse(content=html_content)
 
 
