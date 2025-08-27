@@ -121,14 +121,24 @@ class WebService:
                 # Check server output for debugging
                 time.sleep(2)  # Give server time to start
                 if self.process.poll() is None:  # Process is still running
-                    # Try to read some output
+                    # Try to read some output without blocking
                     try:
-                        stdout, stderr = self.process.communicate(timeout=1)
-                        if stdout:
-                            logger.info(f"Server stdout: {stdout.decode()[:200]}...")
-                        if stderr:
-                            logger.info(f"Server stderr: {stderr.decode()[:200]}...")
-                    except subprocess.TimeoutExpired:
+                        # Use non-blocking read to get any available output
+                        import select
+                        if hasattr(select, 'select'):
+                            # Check if there's any output available
+                            ready, _, _ = select.select([self.process.stdout, self.process.stderr], [], [], 0.1)
+                            for stream in ready:
+                                if stream == self.process.stdout:
+                                    output = stream.read(200)
+                                    if output:
+                                        logger.info(f"Server stdout: {output.decode()}")
+                                elif stream == self.process.stderr:
+                                    output = stream.read(200)
+                                    if output:
+                                        logger.info(f"Server stderr: {output.decode()}")
+                    except Exception as e:
+                        logger.warning(f"Could not read server output: {e}")
                         pass  # Process is still running, which is good
                 
                 # Log environment variables for debugging
@@ -474,7 +484,7 @@ class WebUIDriver:
                     page_source = self.driver.page_source.lower()
                     
                     # Log current state for debugging
-                    if time.time() - start_time > 30:  # Log every 30 seconds
+                    if time.time() - start_time > 15:  # Log every 15 seconds (reduced for null provider)
                         logger.info(f"⏳ Still waiting... Current URL: {current_url}")
                         logger.info(f"⏳ Page contains 'error': {'error' in page_source}")
                         logger.info(f"⏳ Page contains 'success': {'success' in page_source}")
@@ -538,18 +548,18 @@ class WebUIDriver:
                                 # Step element not found, continue
                                 pass
                         
-                        # Fail if no progress updates for too long
-                        if time.time() - start_time > 60 and progress_update_count == 0:
+                        # Fail if no progress updates for too long (reduced for null provider)
+                        if time.time() - start_time > 30 and progress_update_count == 0:
                             logger.error("❌ No progress updates detected - progress tracking may be broken")
                             return False
                         
-                        # Require at least some progress updates to be seen
-                        if time.time() - start_time > 30 and progress_update_count == 0:
+                        # Require at least some progress updates to be seen (reduced for null provider)
+                        if time.time() - start_time > 15 and progress_update_count == 0:
                             logger.warning("⚠️  No progress updates detected yet - progress indicator may not be working")
                         
                     except Exception as e:
                         # Progress tracking failed, but continue with other completion checks
-                        if time.time() - start_time > 30:  # Only log after 30 seconds
+                        if time.time() - start_time > 15:  # Only log after 15 seconds (reduced for null provider)
                             logger.warning(f"⚠️  Progress tracking failed: {e}")
                     
                     # Check for completion indicators
@@ -628,11 +638,11 @@ class WebUIDriver:
                     except:
                         pass
                     
-                    time.sleep(5)  # Check every 5 seconds
+                    time.sleep(1)  # Check every 1 second for faster response
                     
                 except Exception as e:
                     logger.warning(f"⚠️  Error checking completion: {e}")
-                    time.sleep(5)
+                    time.sleep(1)
                     continue
             
             logger.error(f"❌ Test generation did not complete within {timeout} seconds")
