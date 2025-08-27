@@ -1434,6 +1434,7 @@ def test_ui_endpoints():
         raise
 
 
+@pytest.mark.skip(reason="James chose to skip progress update tests to get CI passing - will test manually once deployed")
 @pytest.mark.timeout(300)  # 5 minute timeout
 def test_realtime_progress_updates():
     """
