@@ -86,6 +86,7 @@ from app.utils.openapi_loader import load_openapi_spec
 from app.utils.openapi_normalizer import normalize_openapi
 from app.utils.zipping import create_artifact_zip
 from app.websocket_manager import websocket_manager
+from app.auth.routes import router as auth_router
 from app.sentry import init_sentry, capture_exception, set_tag
 
 request_semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
@@ -112,6 +113,9 @@ app = FastAPI(
 templates = Jinja2Templates(directory="app/templates")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
+# Include authentication routes
+app.include_router(auth_router)
+
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -130,6 +134,18 @@ async def app_page(request: Request):
             "sentry_environment": settings.sentry_environment,
         },
     )
+
+
+@app.get("/auth", response_class=HTMLResponse)
+async def auth_page(request: Request):
+    """Render authentication page"""
+    return templates.TemplateResponse("auth.html", {"request": request})
+
+
+@app.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(request: Request):
+    """Render pricing page"""
+    return templates.TemplateResponse("pricing.html", {"request": request})
 
 
 @app.post("/app", response_class=HTMLResponse)
@@ -186,6 +202,15 @@ async def status():
         memory_info = None
         memory_percent = None
 
+    # Get generation service stats
+    try:
+        from app.services.generation_service import get_generation_service
+        service = get_generation_service()
+        generation_stats = service.get_service_stats()
+    except Exception as e:
+        logger.error(f"Failed to get generation service stats: {e}")
+        generation_stats = {"error": str(e)}
+
     return {
         "status": "healthy",
         "concurrent_requests": request_semaphore._value,
@@ -194,6 +219,9 @@ async def status():
         "max_cases_per_endpoint": settings.max_cases_per_endpoint,
         "memory_usage_mb": round(memory_info.rss / 1024 / 1024, 2) if memory_info else None,
         "memory_percent": round(memory_percent, 2) if memory_percent else None,
+        "uvicorn_workers": settings.uvicorn_workers,
+        "uvicorn_threads": settings.uvicorn_threads,
+        "generation_service": generation_stats,
     }
 
 
@@ -410,63 +438,52 @@ async def download_task_result(task_id: str):
 
 
 async def generate_test_artifacts_background(task_id: str, request: GenerateRequest):
-    """Background task for generating test artifacts"""
+    """Background task for generating test artifacts using the generation service"""
     try:
-        await update_progress(task_id, "parsing", 10, "Parsing OpenAPI specification...")
-
-        # Load and normalize the spec
-        spec = await load_openapi_spec(request.openapi)
-        normalized = normalize_openapi(spec)
-
-        await update_progress(task_id, "parsing", 100, "OpenAPI specification parsed successfully")
-        await update_progress(
-            task_id,
-            "generating",
-            20,
-            f"Generating test cases for {len(normalized.endpoints)} endpoints...",
+        from app.services.generation_service import get_generation_service, Priority
+        
+        # Get the generation service
+        service = get_generation_service()
+        
+        # Prepare request data
+        request_data = {
+            "task_id": task_id,
+            "normalized_spec": None,  # Will be loaded in the service
+            "cases_per_endpoint": request.casesPerEndpoint,
+            "outputs": request.outputs,
+            "domain_hint": request.domainHint,
+            "seed": request.seed,
+            "ai_speed": request.aiSpeed,
+            "openapi": request.openapi,  # Pass raw OpenAPI data
+        }
+        
+        # Create progress callback
+        async def progress_callback(stage: str, progress: int, message: str):
+            await update_progress(task_id, stage, progress, message)
+        
+        # Get user priority based on subscription tier
+        from app.auth.middleware import get_current_user
+        from app.auth.middleware import get_priority_from_user
+        
+        # Extract user from request context (simplified for now)
+        # In production, this would come from the authenticated user
+        user_priority = Priority.NORMAL  # Default priority
+        
+        submitted_task_id = service.submit_request(
+            request_data=request_data,
+            progress_callback=progress_callback,
+            priority=user_priority,
+            task_id=task_id
         )
-
-        # Generate test cases with detailed progress
-        await update_progress(task_id, "generating", 30, "Starting AI generation...")
-        artifacts = await generate_test_cases_with_progress(
-            task_id,
-            normalized,
-            cases_per_endpoint=request.casesPerEndpoint,
-            outputs=request.outputs,
-            domain_hint=request.domainHint,
-            seed=request.seed,
-            ai_speed=request.aiSpeed,
-        )
-
-        await update_progress(task_id, "generating", 100, "Test cases generated successfully")
-        await update_progress(task_id, "zipping", 20, "Creating ZIP file...")
-
-        # Create ZIP file
-        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
-            zip_path = Path(tmp.name)
-            create_artifact_zip(artifacts, zip_path)
-
-        await update_progress(task_id, "zipping", 100, "ZIP file created successfully")
-        await update_progress(
-            task_id, "complete", 100, "Generation complete! ZIP file ready for download."
-        )
-
-        # Store the ZIP file path for later retrieval
-        websocket_manager.task_results[task_id] = {"zip_path": str(zip_path)}
-
-        # Clean up memory after generation
-        del artifacts
-        gc.collect()
-
+        
+        logger.info(f"Generation request {task_id} submitted to service")
+        
+        # The service will handle the generation and progress updates
+        # We just need to wait for completion and handle the result
+        
     except Exception as e:
-        logger.error(f"Background generation error: {e}")
-        # Capture error with Sentry for monitoring
-        capture_exception(e, context={"task_id": task_id, "stage": "background_generation"})
-        await update_progress(task_id, "error", 0, f"Generation failed: {str(e)}")
-    finally:
-        # Clean up task data after a delay
-        await asyncio.sleep(300)  # Keep for 5 minutes
-        websocket_manager.cleanup_task(task_id)
+        logger.error(f"Failed to submit generation request: {e}")
+        await update_progress(task_id, "error", 0, f"Failed to submit generation request: {str(e)}")
 
 
 @app.post("/generate-ui")
@@ -593,6 +610,24 @@ async def not_found(request: Request, exc):
     return templates.TemplateResponse(
         "landing.html", {"request": request, "error": "Page not found"}, status_code=404
     )
+
+
+# Startup and shutdown events
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    from app.services.generation_service import get_generation_service
+    # Initialize the generation service
+    get_generation_service()
+    logger.info("✅ Generation service initialized")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup services on shutdown"""
+    from app.services.generation_service import shutdown_generation_service
+    # Shutdown the generation service
+    shutdown_generation_service()
+    logger.info("✅ Generation service shutdown")
 
 
 if __name__ == "__main__":

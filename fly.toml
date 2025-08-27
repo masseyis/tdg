@@ -10,6 +10,12 @@ primary_region = "ord"
   PYTHONUNBUFFERED = "1"
   PYTHONDONTWRITEBYTECODE = "1"
   PYTHONOPTIMIZE = "1"
+  # Uvicorn settings
+  UVICORN_WORKERS = "2"
+  UVICORN_THREADS = "4"
+  # Generation service settings
+  GENERATION_WORKERS = "2"
+  GENERATION_QUEUE_SIZE = "100"
 
 [http_service]
   internal_port = 8080
@@ -21,9 +27,9 @@ primary_region = "ord"
 
 # Machine configuration for memory management
 [[vm]]
-  memory = "1GB"
+  memory = "2GB"
   cpu_kind = "shared"
-  cpus = 1
+  cpus = 2
 
 [[services]]
   protocol = "tcp"

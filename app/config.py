@@ -1,5 +1,6 @@
 """Application configuration"""
 
+import os
 from typing import Optional
 
 from pydantic_settings import BaseSettings
@@ -39,12 +40,26 @@ class Settings(BaseSettings):
     # Concurrency settings (optimized for performance and memory stability)
     ai_concurrency_limit: int = 8  # Maximum concurrent AI requests
     max_concurrent_requests: int = 30  # Maximum concurrent HTTP requests
+    
+    # Uvicorn server settings
+    uvicorn_workers: int = int(os.getenv("UVICORN_WORKERS", "2"))  # Number of uvicorn worker processes
+    uvicorn_threads: int = int(os.getenv("UVICORN_THREADS", "4"))  # Number of threads per worker
+    
+    # Generation service settings
+    generation_workers: int = int(os.getenv("GENERATION_WORKERS", "2"))  # Number of generation worker threads
+    generation_queue_size: int = int(os.getenv("GENERATION_QUEUE_SIZE", "100"))  # Maximum queued generation requests
 
     # Sentry settings
     sentry_dsn: Optional[str] = None
     sentry_environment: str = "development"
     sentry_traces_sample_rate: float = 0.1
     sentry_profiles_sample_rate: float = 0.1
+    
+    # Clerk authentication settings
+    clerk_jwt_public_key: Optional[str] = None
+    clerk_issuer: str = "https://clerk.your-domain.com"
+    clerk_secret_key: Optional[str] = None
+    clerk_webhook_secret: Optional[str] = None
 
     class Config:
         env_file = ".env"

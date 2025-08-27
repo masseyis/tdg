@@ -18,6 +18,57 @@ Each entry should include:
 ---
 
 ## Recent Changes
+
+### 2025-01-26 - Generation Service with Priority Queuing
+
+**Change Type**: Backend/Infrastructure
+
+**Summary**: Implemented dedicated generation service with priority queuing to prevent thread starvation and enable tiered pricing.
+
+**Rationale**: 
+- Test generation was blocking all web server threads, causing WebSocket failures
+- Health checks were timing out during generation
+- Progress updates were impossible due to thread starvation
+- Need foundation for future tiered pricing based on priority levels
+
+**Implementation**:
+- Created `app/services/generation_service.py` with priority queue system
+- Implemented separate thread pool for generation workers (2 threads)
+- Added priority levels: HIGH, NORMAL, LOW for future pricing tiers
+- Enhanced uvicorn configuration: 2 workers × 4 threads = 8 web threads
+- Increased Fly.io resources: 2GB RAM, 2 CPUs
+- Added comprehensive monitoring via `/status` endpoint
+- Integrated with existing WebSocket progress tracking
+
+**Pros**:
+- ✅ **Thread Starvation Prevention**: Web requests always served during generation
+- ✅ **Scalable Priority System**: Foundation for tiered pricing
+- ✅ **Better Resource Utilization**: Optimal thread allocation (8 web + 2 generation)
+- ✅ **Real-time Progress**: WebSocket updates work reliably
+- ✅ **Comprehensive Monitoring**: Service metrics and status tracking
+- ✅ **Future-proof**: Easy user-based priority assignment
+- ✅ **Health Check Reliability**: Health checks never blocked by generation
+
+**Cons**:
+- ⚠️ **Increased Complexity**: More moving parts to maintain and debug
+- ⚠️ **Higher Resource Usage**: 2GB RAM vs 1GB, 2 CPUs vs 1
+- ⚠️ **Higher Costs**: Increased Fly.io resource allocation
+- ⚠️ **Potential Race Conditions**: More complex async interactions
+- ⚠️ **Memory Pressure**: Higher baseline memory usage
+
+**Impact**:
+- WebSocket connections establish immediately, even during generation
+- Progress indicators work reliably with real-time updates
+- Health checks respond quickly regardless of generation load
+- Foundation for implementing tiered pricing in the future
+- Better user experience with non-blocking UI
+
+**Migration**:
+- **Deployment**: Requires Fly.io app restart for new configuration
+- **Environment Variables**: New vars in `fly.toml` and `app/config.py`
+- **Backward Compatibility**: Existing API endpoints unchanged
+- **Monitoring**: New `/status` endpoint provides visibility
+
 ### 2025-08-26 - [Auto-detected Change]
 
 **Change Type**: General
