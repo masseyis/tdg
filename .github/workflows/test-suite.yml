@@ -143,8 +143,13 @@ jobs:
       run: |
         echo "🚀 Starting test server for integration tests..."
         echo "⚠️  NON-NEGOTIABLE: Integration tests must pass for git pushes"
+        
+        # Set environment variable BEFORE starting the server
+        export DISABLE_AUTH_FOR_DEV=true
+        echo "🔓 Setting DISABLE_AUTH_FOR_DEV=$DISABLE_AUTH_FOR_DEV"
+        
         # Start the server in the background with proper logging and auth disabled for testing
-        DISABLE_AUTH_FOR_DEV=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info > server.log 2>&1 &
+        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info > server.log 2>&1 &
         SERVER_PID=$!
         
         # Wait for server to start and be ready
@@ -186,16 +191,13 @@ jobs:
         echo "Testing API generation endpoint..."
         echo '{"openapi":"3.0.0","info":{"title":"Test API","version":"1.0.0"},"paths":{"\/test":{"get":{"responses":{"200":{"description":"OK"}}}}}}' > /tmp/test-spec.json
         
-        # Test the /api/generate endpoint (doesn't require authentication)
-        response=$(curl -s -w "%{http_code}" -X POST http://localhost:8000/api/generate \
-          -H "Content-Type: application/json" \
-          -d '{
-            "openapi_spec": "'$(base64 -w 0 /tmp/test-spec.json)'",
-            "cases_per_endpoint": 2,
-            "outputs": ["json"],
-            "domain_hint": "test",
-            "ai_speed": "fast"
-          }')
+        # Test the generate-ui endpoint (more suitable for integration testing)
+        response=$(curl -s -w "%{http_code}" -X POST http://localhost:8000/generate-ui \
+          -F "file=@/tmp/test-spec.json" \
+          -F "outputs=json" \
+          -F "casesPerEndpoint=2" \
+          -F "domainHint=test" \
+          -F "aiSpeed=fast")
         
         http_code="${response: -3}"
         body="${response%???}"
