@@ -3,12 +3,12 @@ Authentication routes for user management and Clerk integration.
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
 
 from app.auth.middleware import (
-    get_current_user, require_auth, get_user_subscription, 
+    get_current_user, require_auth, require_auth_or_dev, get_user_subscription, 
     get_user_usage, get_priority_from_user
 )
 from app.auth.clerk_auth import get_user_manager
@@ -102,12 +102,44 @@ async def logout(request: LogoutRequest):
 
 @router.get("/me", response_model=AuthResponse)
 async def get_current_user_info(
-    current_user: UserProfile = Depends(require_auth)
+    current_user: Optional[UserProfile] = Depends(require_auth_or_dev)
 ):
     """
     Get current user information, subscription, and usage.
     """
     try:
+        # If in dev mode and no user, return a mock authenticated response
+        if current_user is None:
+            from app.config import settings
+            if settings.disable_auth_for_dev:
+                logger.info("🔓 Development mode: Returning mock authenticated user")
+                mock_user = UserProfile(
+                    user_id="dev-user",
+                    email="dev@example.com",
+                    first_name="Dev",
+                    last_name="User",
+                    image_url=""
+                )
+                subscription = SUBSCRIPTION_TIERS["free"]
+                usage = UsageMetrics(
+                    user_id="dev-user",
+                    tier=subscription.tier,
+                    current_period="2025-01",
+                    generations_used=0,
+                    generations_limit=subscription.limits["generations_per_month"],
+                    downloads_used=0,
+                    downloads_limit=subscription.limits["downloads_per_month"],
+                    endpoints_processed=0,
+                    storage_used_mb=0.0,
+                    storage_limit_mb=subscription.limits["storage_mb"]
+                )
+                return AuthResponse(
+                    authenticated=True,
+                    user=mock_user,
+                    subscription=subscription,
+                    usage=usage
+                )
+        
         subscription = await get_user_subscription(current_user)
         usage = await get_user_usage(current_user)
         

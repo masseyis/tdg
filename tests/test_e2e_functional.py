@@ -1077,7 +1077,6 @@ class NodeTestRunner:
 
 
 @pytest.mark.timeout(300)  # 5 minute timeout
-@pytest.mark.skip(reason="Temporarily disabled - server startup issue in test environment")
 def test_complete_user_experience():
     """
     ⚠️  CRITICAL: This test MUST always pass and NEVER be disabled! ⚠️
@@ -1268,7 +1267,6 @@ def test_complete_user_experience():
 
 
 @pytest.mark.timeout(600)  # 10 minute timeout for AI testing
-@pytest.mark.skip(reason="Temporarily disabled - server startup issue in test environment")
 def test_complete_user_experience_with_ai():
     """
     ⚠️  CRITICAL: This test validates AI integration with real OpenAI calls! ⚠️
@@ -1504,7 +1502,6 @@ def test_ui_endpoints():
 
 
 @pytest.mark.timeout(300)  # 5 minute timeout
-@pytest.mark.skip(reason="Temporarily disabled - server startup issue in test environment")
 def test_realtime_progress_updates():
     """
     ⚠️  CRITICAL: Test real-time progress updates via WebSocket ⚠️
