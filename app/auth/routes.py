@@ -5,7 +5,7 @@ Authentication routes for user management and Clerk integration.
 import logging
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 
 from app.auth.middleware import (
     get_current_user,
@@ -150,6 +150,124 @@ async def get_current_user_info(current_user: Optional[UserProfile] = Depends(re
     except Exception as e:
         logger.error(f"Error getting user info: {e}")
         raise HTTPException(status_code=500, detail="Failed to get user info")
+
+
+@router.get("/github")
+async def github_oauth():
+    """
+    Redirect to Clerk's GitHub OAuth.
+    
+    In a real implementation, this would redirect to Clerk's OAuth flow.
+    For now, we'll redirect to a mock authentication page for testing.
+    """
+    # TODO: Implement proper Clerk OAuth redirect
+    # For development/testing, redirect to a mock auth success page
+    return RedirectResponse(url="/auth/mock-success?provider=github")
+
+
+@router.get("/google")
+async def google_oauth():
+    """
+    Redirect to Clerk's Google OAuth.
+    
+    In a real implementation, this would redirect to Clerk's OAuth flow.
+    For now, we'll redirect to a mock authentication page for testing.
+    """
+    # TODO: Implement proper Clerk OAuth redirect
+    # For development/testing, redirect to a mock auth success page
+    return RedirectResponse(url="/auth/mock-success?provider=google")
+
+
+@router.get("/apple")
+async def apple_oauth():
+    """
+    Redirect to Clerk's Apple OAuth.
+    
+    In a real implementation, this would redirect to Clerk's OAuth flow.
+    For now, we'll redirect to a mock authentication page for testing.
+    """
+    # TODO: Implement proper Clerk OAuth redirect
+    # For development/testing, redirect to a mock auth success page
+    return RedirectResponse(url="/auth/mock-success?provider=apple")
+
+
+@router.get("/mock-success")
+async def mock_auth_success(request: Request):
+    """
+    Mock authentication success page for testing OAuth flows.
+    
+    This endpoint simulates a successful OAuth authentication and
+    provides a mock JWT token for testing purposes.
+    """
+    provider = request.query_params.get("provider", "unknown")
+    
+    # Create a mock user profile for testing
+    mock_user = UserProfile(
+        user_id=f"test-{provider}-user",
+        email=f"test-{provider}@example.com",
+        first_name="Test",
+        last_name=provider.capitalize(),
+        image_url=""
+    )
+    
+    # Create mock subscription and usage
+    subscription = SUBSCRIPTION_TIERS["free"]
+    usage = UsageMetrics(
+        user_id=mock_user.user_id,
+        tier=subscription.tier,
+        current_period="2025-01",
+        generations_used=0,
+        generations_limit=subscription.limits["generations_per_month"],
+        downloads_used=0,
+        downloads_limit=subscription.limits["downloads_per_month"],
+        endpoints_processed=0,
+        storage_used_mb=0.0,
+        storage_limit_mb=subscription.limits["storage_mb"],
+    )
+    
+    # Create a mock JWT token (in real implementation, this would come from Clerk)
+    mock_token = f"mock-jwt-{provider}-{mock_user.user_id}"
+    
+    # Store mock user data temporarily (in real implementation, this would be in a database)
+    # For now, we'll use a simple in-memory store
+    if not hasattr(request.app.state, 'mock_users'):
+        request.app.state.mock_users = {}
+    request.app.state.mock_users[mock_token] = {
+        "user": mock_user,
+        "subscription": subscription,
+        "usage": usage
+    }
+    
+    # Return HTML page that will set the token and redirect
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Authentication Success - {provider.capitalize()}</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; text-align: center; padding: 50px; }}
+            .success {{ color: green; font-size: 24px; margin-bottom: 20px; }}
+            .info {{ color: #666; margin-bottom: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="success">✅ Authentication Successful!</div>
+        <div class="info">You have been authenticated via {provider.capitalize()}</div>
+        <div class="info">Redirecting to the app...</div>
+        <script>
+            // Set the mock token in localStorage
+            localStorage.setItem('clerk_token', '{mock_token}');
+            
+            // Redirect to the app
+            setTimeout(() => {{
+                window.location.href = '/app';
+            }}, 2000);
+        </script>
+    </body>
+    </html>
+    """
+    
+    return HTMLResponse(content=html_content)
 
 
 @router.get("/subscription", response_model=SubscriptionTier)

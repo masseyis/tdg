@@ -17,12 +17,14 @@ security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> Optional[UserProfile]:
     """
     Extract and verify current user from JWT token.
 
     Args:
+        request: FastAPI request object for accessing app state
         credentials: HTTP Bearer token credentials
 
     Returns:
@@ -35,6 +37,18 @@ async def get_current_user(
         return None
 
     try:
+        # Check if this is a mock token for testing
+        if credentials.credentials.startswith("mock-jwt-"):
+            if hasattr(request.app.state, 'mock_users'):
+                mock_user_data = request.app.state.mock_users.get(credentials.credentials)
+                if mock_user_data:
+                    logger.info(f"Using mock token for user: {mock_user_data['user'].user_id}")
+                    return mock_user_data['user']
+            
+            # Mock token not found or invalid
+            raise HTTPException(status_code=401, detail="Invalid mock token")
+
+        # Handle real Clerk JWT tokens
         clerk_auth = get_clerk_auth()
         token_payload = clerk_auth.verify_jwt(credentials.credentials)
 
@@ -71,7 +85,8 @@ async def require_auth(
 
 
 async def require_auth_or_dev(
-    current_user: Optional[UserProfile] = Depends(get_current_user), request: Request = None
+    request: Request,
+    current_user: Optional[UserProfile] = Depends(get_current_user),
 ) -> Optional[UserProfile]:
     """
     Require authentication for protected routes, but allow bypass in development.

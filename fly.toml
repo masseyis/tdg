@@ -11,7 +11,7 @@ primary_region = "ord"
   PYTHONDONTWRITEBYTECODE = "1"
   PYTHONOPTIMIZE = "1"
   # Uvicorn settings
-  UVICORN_WORKERS = "2"
+  UVICORN_WORKERS = "3"
   UVICORN_THREADS = "4"
   # Generation service settings
   GENERATION_WORKERS = "2"

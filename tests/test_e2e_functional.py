@@ -54,9 +54,10 @@ def timeout_handler(signum, frame):
 class WebService:
     """Manages the main web service process"""
     
-    def __init__(self, port: int = None):
+    def __init__(self, port: int = None, enable_auth: bool = False):
         self.port = port or self._find_random_port()
         self.process = None
+        self.enable_auth = enable_auth
         
     def _find_random_port(self):
         """Find a random available port"""
@@ -98,7 +99,14 @@ class WebService:
                 # Set environment variables
                 env = os.environ.copy()
                 env['PYTHONPATH'] = os.getcwd()
-                env['DISABLE_AUTH_FOR_DEV'] = 'true'  # Disable auth for tests
+                
+                # Set auth mode based on enable_auth parameter
+                if self.enable_auth:
+                    env['DISABLE_AUTH_FOR_DEV'] = 'false'
+                    logger.info("🔐 Starting with authentication ENABLED")
+                else:
+                    env['DISABLE_AUTH_FOR_DEV'] = 'true'
+                    logger.info("🔓 Starting with authentication DISABLED")
                 
                 # Start uvicorn as a subprocess
                 self.process = subprocess.Popen([
@@ -1426,7 +1434,6 @@ def test_ui_endpoints():
         raise
 
 
-@pytest.mark.skip(reason="James chose to skip progress update tests to get CI passing - will test manually once deployed")
 @pytest.mark.timeout(300)  # 5 minute timeout
 def test_realtime_progress_updates():
     """
