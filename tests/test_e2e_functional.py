@@ -550,6 +550,7 @@ class WebUIDriver:
                         
                         # NOTE: James chose to comment out progress indicator checks to get CI passing
                         # Progress indicator validation temporarily disabled - will test manually once deployed
+                        # TODO: Re-enable progress indicator checks after testing manually
                         # if time.time() - start_time > 30 and progress_update_count == 0:
                         #     logger.error("❌ No progress updates detected - progress tracking may be broken")
                         #     return False
@@ -573,6 +574,7 @@ class WebUIDriver:
                                     logger.info(f"✅ Found hidden completion indicator: {selector_value}")
                                     # NOTE: James chose to comment out progress indicator checks to get CI passing
                                     # Progress indicator validation temporarily disabled - will test manually once deployed
+                                    # TODO: Re-enable progress indicator checks after testing manually
                                     # if progress_update_count > 0:
                                     #     logger.info(f"✅ Progress tracking confirmed: {progress_update_count} updates seen")
                                     # else:
@@ -585,6 +587,7 @@ class WebUIDriver:
                                     logger.info(f"✅ Found visible completion indicator: {selector_value}")
                                     # NOTE: James chose to comment out progress indicator checks to get CI passing
                                     # Progress indicator validation temporarily disabled - will test manually once deployed
+                                    # TODO: Re-enable progress indicator checks after testing manually
                                     # if progress_update_count > 0:
                                     #     logger.info(f"✅ Progress tracking confirmed: {progress_update_count} updates seen")
                                     # else:
@@ -604,6 +607,7 @@ class WebUIDriver:
                         logger.info("✅ Page redirected to result/generate page")
                         # NOTE: James chose to comment out progress indicator checks to get CI passing
                         # Progress indicator validation temporarily disabled - will test manually once deployed
+                        # TODO: Re-enable progress indicator checks after testing manually
                         # if progress_update_count > 0:
                         #     logger.info(f"✅ Progress tracking confirmed: {progress_update_count} updates seen")
                         # else:
@@ -618,6 +622,7 @@ class WebUIDriver:
                             logger.info("✅ Loading spinner disappeared - generation likely complete")
                             # NOTE: James chose to comment out progress indicator checks to get CI passing
                             # Progress indicator validation temporarily disabled - will test manually once deployed
+                            # TODO: Re-enable progress indicator checks after testing manually
                             # if progress_update_count > 0:
                             #     logger.info(f"✅ Progress tracking confirmed: {progress_update_count} updates seen")
                             # else:
@@ -635,6 +640,7 @@ class WebUIDriver:
                             logger.info("✅ Submit button is no longer disabled - generation likely complete")
                             # NOTE: James chose to comment out progress indicator checks to get CI passing
                             # Progress indicator validation temporarily disabled - will test manually once deployed
+                            # TODO: Re-enable progress indicator checks after testing manually
                             # if progress_update_count > 0:
                             #     logger.info(f"✅ Progress tracking confirmed: {progress_update_count} updates seen")
                             # else:
