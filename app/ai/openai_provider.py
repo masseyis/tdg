@@ -43,7 +43,12 @@ class OpenAIProvider(AIProvider):
         else:
             return settings.openai_model, settings.ai_temperature, settings.ai_max_tokens
 
-    async def generate_cases(self, endpoint: Any, options: Dict[str, Any], progress_callback: Optional[ProgressCallback] = None) -> List[TestCase]:
+    async def generate_cases(
+        self,
+        endpoint: Any,
+        options: Dict[str, Any],
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> List[TestCase]:
         """Generate test cases using OpenAI"""
         if not self.client:
             # Fallback to null provider
@@ -123,16 +128,16 @@ class OpenAIProvider(AIProvider):
     async def _call_ai(self, prompt: str) -> str:
         """
         Call OpenAI API with a custom prompt and return the response
-        
+
         Args:
             prompt: The prompt to send to OpenAI
-            
+
         Returns:
             The AI response as a string
         """
         if not self.client:
             raise Exception("OpenAI client not available")
-        
+
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",  # Use fast model for enhancement
@@ -147,9 +152,9 @@ class OpenAIProvider(AIProvider):
                 max_tokens=1500,  # Reasonable limit for enhancement
                 timeout=30,  # Shorter timeout for enhancement
             )
-            
+
             return response.choices[0].message.content
-            
+
         except Exception as e:
             logger.error(f"OpenAI API call failed: {e}")
             raise

@@ -1,11 +1,16 @@
 name: Comprehensive Test Suite
 
+# 🚨 CRITICAL: NON-NEGOTIABLE REQUIREMENT
+# ALL TESTS MUST RUN AS REQUIRED CHECKS BEFORE ALLOWING GIT PUSHES
+# This prevents CI build failures by ensuring tests pass before any merge
+# 
 # ⚠️  CRITICAL NOTES TO SELF:
 # 1. ALL TESTS MUST RUN WITH COVERAGE AND PASS BEFORE DEPLOYMENT
 # 2. The e2e test is the most important - it validates the complete user journey
 # 3. The post-deploy test must fully mimic user behavior, just like the e2e test does
 # 4. The post-deploy test must ALWAYS run against the deployed site
 # 5. This workflow consolidates all testing into one comprehensive suite
+# 6. ALL JOBS MUST BE MARKED AS REQUIRED STATUS CHECKS FOR BRANCH PROTECTION
 
 on:
   push:
@@ -17,7 +22,9 @@ jobs:
   # CRITICAL: All tests must run with coverage and pass before deployment
   # The e2e test is the most important - it validates the complete user journey
   # This job runs the full test suite including coverage
+  # STATUS CHECK NAME: "comprehensive-test-suite" (REQUIRED FOR BRANCH PROTECTION)
   comprehensive-test-suite:
+    name: "🧪 Comprehensive Test Suite (REQUIRED)"
     runs-on: ubuntu-latest
     
     steps:
@@ -51,10 +58,12 @@ jobs:
     - name: Run comprehensive test suite with coverage
       run: |
         echo "🧪 Running comprehensive test suite with coverage..."
-        echo "⚠️  CRITICAL: All tests must pass before deployment!"
+        echo "🚨 CRITICAL: All tests must pass before deployment!"
         echo "🎯 E2E test is the most important - validates complete user journey"
+        echo "⚠️  NON-NEGOTIABLE: Tests are required checks for git pushes"
         
         # Run all tests with coverage (excluding post-deploy test)
+        # FAIL-FAST: Exit immediately on any test failure
         python -m pytest tests/ -v \
           --cov=app \
           --cov-report=xml \
@@ -62,7 +71,9 @@ jobs:
           --cov-report=term-missing \
           --cov-fail-under=20 \
           --junit-xml=test-results.xml \
-          -m "not post_deploy"
+          -m "not post_deploy" \
+          --tb=short \
+          --maxfail=1
         
         echo "✅ All tests completed with coverage"
         
@@ -81,7 +92,7 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
-        fail_ci_if_error: false
+        fail_ci_if_error: true  # FAIL-FAST: Must succeed
         
     - name: Upload test results as artifacts
       uses: actions/upload-artifact@v4
@@ -97,16 +108,20 @@ jobs:
     - name: Run linting
       run: |
         echo "🔍 Running code quality checks..."
+        echo "⚠️  NON-NEGOTIABLE: Linting must pass for git pushes"
         pip install flake8 black
-        flake8 app/ --max-line-length=88 --extend-ignore=E203,W503,E501,E302,E303,E304,E305,E114,E116,E117,E261,E262,E266,F401,F541,E301,E127,W291 || echo "Linting issues found but continuing..."
-        black --check app/ || echo "Black formatting issues found but continuing..."
+        # FAIL-FAST: Linting must pass - no exceptions
+        flake8 app/ --max-line-length=88 --extend-ignore=E203,W503,E501,E302,E303,E304,E305,E114,E116,E117,E261,E262,E266,F401,F541,E301,E127,W291
+        black --check app/
         
   # CRITICAL: E2E test is now included in comprehensive-test-suite
   # This validates the complete user journey through the UI
   # No separate job needed - avoids duplicate test execution
 
   # Integration tests against local server
+  # STATUS CHECK NAME: "integration-tests" (REQUIRED FOR BRANCH PROTECTION)
   integration-tests:
+    name: "🔗 Integration Tests (REQUIRED)"
     runs-on: ubuntu-latest
     needs: [comprehensive-test-suite]
     
@@ -127,6 +142,7 @@ jobs:
     - name: Start test server
       run: |
         echo "🚀 Starting test server for integration tests..."
+        echo "⚠️  NON-NEGOTIABLE: Integration tests must pass for git pushes"
         # Start the server in the background with proper logging and auth disabled for testing
         DISABLE_AUTH_FOR_DEV=true python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info > server.log 2>&1 &
         SERVER_PID=$!
@@ -142,7 +158,7 @@ jobs:
             echo "Server failed to start after 30 seconds"
             echo "Server log:"
             cat server.log
-            exit 1
+            exit 1  # FAIL-FAST: Exit immediately
           fi
           sleep 1
         done
@@ -152,7 +168,7 @@ jobs:
           echo "Server process is not running"
           echo "Server log:"
           cat server.log
-          exit 1
+          exit 1  # FAIL-FAST: Exit immediately
         fi
         
         echo "Server started successfully with PID $SERVER_PID"
@@ -160,10 +176,11 @@ jobs:
     - name: Run integration tests
       run: |
         echo "🧪 Running integration tests against local server..."
+        echo "⚠️  NON-NEGOTIABLE: Integration tests must pass for git pushes"
         
         # Test health endpoint
         echo "Testing health endpoint..."
-        curl -f http://localhost:8000/health || exit 1
+        curl -f http://localhost:8000/health || exit 1  # FAIL-FAST
         
         # Test API endpoint with a simple OpenAPI spec
         echo "Testing API generation endpoint..."
@@ -186,7 +203,7 @@ jobs:
         if [ "$http_code" != "200" ]; then
           echo "API test failed with HTTP code $http_code"
           echo "Full response: $response"
-          exit 1
+          exit 1  # FAIL-FAST: Exit immediately
         fi
         
         echo "✅ Integration tests completed successfully"
@@ -202,10 +219,10 @@ jobs:
         # Also kill any uvicorn processes
         pkill -f "uvicorn app.main:app" || true
 
-
-
   # Coverage analysis and reporting
+  # STATUS CHECK NAME: "coverage-analysis" (REQUIRED FOR BRANCH PROTECTION)
   coverage-analysis:
+    name: "📊 Coverage Analysis (REQUIRED)"
     runs-on: ubuntu-latest
     needs: [comprehensive-test-suite]
     
@@ -236,6 +253,7 @@ jobs:
     - name: Generate coverage trends report
       run: |
         echo "📊 Generating coverage trends report..."
+        echo "⚠️  NON-NEGOTIABLE: Coverage analysis must complete for git pushes"
         echo "# 📊 Coverage Trends Analysis" > coverage-trends.md
         echo "" >> coverage-trends.md
         echo "## 📅 Analysis Date" >> coverage-trends.md

@@ -41,7 +41,12 @@ class AnthropicProvider(AIProvider):
         else:
             return "claude-3-sonnet-20240229", 0.3, 2000  # Default to balanced
 
-    async def generate_cases(self, endpoint: Any, options: Dict[str, Any], progress_callback: Optional[ProgressCallback] = None) -> List[TestCase]:
+    async def generate_cases(
+        self,
+        endpoint: Any,
+        options: Dict[str, Any],
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> List[TestCase]:
         """Generate test cases using Anthropic"""
         if not self.client:
             # Fallback to null provider
@@ -114,16 +119,16 @@ class AnthropicProvider(AIProvider):
     async def _call_ai(self, prompt: str) -> str:
         """
         Call Anthropic API with a custom prompt and return the response
-        
+
         Args:
             prompt: The prompt to send to Anthropic
-            
+
         Returns:
             The AI response as a string
         """
         if not self.client:
             raise Exception("Anthropic client not available")
-        
+
         try:
             message = self.client.messages.create(
                 model="claude-3-haiku-20240307",  # Fastest model for enhancement
@@ -132,9 +137,9 @@ class AnthropicProvider(AIProvider):
                 system="You are a test data generation expert. Generate test cases as valid JSON.",
                 messages=[{"role": "user", "content": prompt}],
             )
-            
+
             return message.content[0].text
-            
+
         except Exception as e:
             logger.error(f"Anthropic API call failed: {e}")
             raise

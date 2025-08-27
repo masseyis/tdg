@@ -129,7 +129,7 @@ async def index(request: Request):
 async def app_page(request: Request):
     """Render app page"""
     logger.info(f"🔍 App page requested. DISABLE_AUTH_FOR_DEV: {settings.disable_auth_for_dev}")
-    
+
     # Check if authentication is disabled for development
     if settings.disable_auth_for_dev:
         logger.info("🔓 Development mode: Authentication bypassed for app page")
@@ -141,7 +141,7 @@ async def app_page(request: Request):
                 "sentry_environment": settings.sentry_environment,
             },
         )
-    
+
     # NOTE: James chose to temporarily disable authentication for E2E tests
     # Authentication temporarily disabled - will re-enable after testing
     # TODO: Re-enable authentication after E2E tests are working
@@ -198,7 +198,8 @@ async def trigger_error():
     """Test endpoint to trigger a Sentry error for debugging purposes"""
     try:
         # Intentionally trigger a division by zero error
-        division_by_zero = 1 / 0
+        # division_by_zero = 1 / 0  # Unused variable
+        1 / 0  # Trigger division by zero
         return {"message": "This should never be reached"}
     except Exception as e:
         # Capture the error in Sentry with context
@@ -231,6 +232,7 @@ async def status():
     # Get generation service stats
     try:
         from app.services.generation_service import get_generation_service
+
         service = get_generation_service()
         generation_stats = service.get_service_stats()
     except Exception as e:
@@ -332,32 +334,34 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
 
 @app.post("/api/generate")
 async def generate(
-    request: GenerateRequest, 
+    request: GenerateRequest,
     background_tasks: BackgroundTasks,
-    current_user = Depends(require_auth_or_dev)
+    current_user=Depends(require_auth_or_dev),
 ):
     """
     Generate test artifacts from OpenAPI spec - JSON API endpoint
-    
+
     ⚠️  IMPORTANT: This endpoint is for API users and is SYNCHRONOUS by default.
     It returns the complete result after generation finishes.
     For UI users who want real-time progress updates, use /generate-ui instead.
-    
+
     This endpoint should NOT be used by the web UI - it will block until
     generation completes, which can take a long time and provide no feedback.
-    
+
     Use cases:
     - API integrations
     - CI/CD pipelines
     - Automated testing
     - Background job processing (when use_background=True)
-    
+
     For web UI form submissions, use /generate-ui instead.
     """
     logger.info("✅ /api/generate endpoint called - this is the correct async endpoint")
     logger.info(f"🔍 Request data: {request}")
     logger.info(f"🔍 Request openapi length: {len(request.openapi) if request.openapi else 0}")
-    logger.info(f"🔍 Request openapi preview: {request.openapi[:100] if request.openapi else 'None'}...")
+    logger.info(
+        f"🔍 Request openapi preview: {request.openapi[:100] if request.openapi else 'None'}..."
+    )
     logger.info(f"🔍 Request outputs: {request.outputs}")
     logger.info(f"🔍 Request use_background: {getattr(request, 'use_background', 'Not set')}")
     try:
@@ -471,10 +475,10 @@ async def generate_test_artifacts_background(task_id: str, request: GenerateRequ
     """Background task for generating test artifacts using the generation service"""
     try:
         from app.services.generation_service import get_generation_service, Priority
-        
+
         # Get the generation service
         service = get_generation_service()
-        
+
         # Prepare request data
         request_data = {
             "task_id": task_id,
@@ -486,31 +490,32 @@ async def generate_test_artifacts_background(task_id: str, request: GenerateRequ
             "ai_speed": request.aiSpeed,
             "openapi": request.openapi,  # Pass raw OpenAPI data
         }
-        
+
         # Create progress callback
         async def progress_callback(stage: str, progress: int, message: str):
             await update_progress(task_id, stage, progress, message)
-        
+
         # Get user priority based on subscription tier
         from app.auth.middleware import get_current_user
         from app.auth.middleware import get_priority_from_user
-        
+
         # Extract user from request context (simplified for now)
         # In production, this would come from the authenticated user
         user_priority = Priority.NORMAL  # Default priority
-        
-        submitted_task_id = service.submit_request(
+
+        # submitted_task_id = service.submit_request(  # Unused variable
+        service.submit_request(
             request_data=request_data,
             progress_callback=progress_callback,
             priority=user_priority,
-            task_id=task_id
+            task_id=task_id,
         )
-        
+
         logger.info(f"Generation request {task_id} submitted to service")
-        
+
         # The service will handle the generation and progress updates
         # We just need to wait for completion and handle the result
-        
+
     except Exception as e:
         logger.error(f"Failed to submit generation request: {e}")
         await update_progress(task_id, "error", 0, f"Failed to submit generation request: {str(e)}")
@@ -526,26 +531,26 @@ async def generate_ui(
     domainHint: Optional[str] = Form(None),
     seed: Optional[int] = Form(None),
     aiSpeed: str = Form("fast"),
-    current_user = Depends(require_auth_or_dev),
+    current_user=Depends(require_auth_or_dev),
 ):
     """
     Handle form submission from UI - ASYNCHRONOUS with WebSocket progress tracking
-    
+
     ⚠️  IMPORTANT: This endpoint is for UI users and is ASYNCHRONOUS.
     It starts a background task and returns immediately with a task_id.
     Progress updates are sent via WebSocket to provide real-time feedback.
-    
+
     This endpoint should be used by the web UI for:
     - Real-time progress tracking
     - Non-blocking user experience
     - WebSocket-based status updates
-    
+
     Use cases:
     - Web UI form submissions
     - File uploads from browsers
     - Real-time progress tracking via WebSocket
     - Non-blocking user experience
-    
+
     For programmatic API access, use /api/generate instead.
     """
     logger.warning("🚨 /generate-ui endpoint called - this should NOT happen with async frontend!")
@@ -648,14 +653,17 @@ async def not_found(request: Request, exc):
 async def startup_event():
     """Initialize services on startup"""
     from app.services.generation_service import get_generation_service
+
     # Initialize the generation service
     get_generation_service()
     logger.info("✅ Generation service initialized")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup services on shutdown"""
     from app.services.generation_service import shutdown_generation_service
+
     # Shutdown the generation service
     shutdown_generation_service()
     logger.info("✅ Generation service shutdown")

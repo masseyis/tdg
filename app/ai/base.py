@@ -28,7 +28,12 @@ class AIProvider(ABC):
     """Abstract base class for AI providers"""
 
     @abstractmethod
-    async def generate_cases(self, endpoint: Any, options: Dict[str, Any], progress_callback: Optional[ProgressCallback] = None) -> List[TestCase]:
+    async def generate_cases(
+        self,
+        endpoint: Any,
+        options: Dict[str, Any],
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> List[TestCase]:
         """
         Generate test cases for an endpoint
 

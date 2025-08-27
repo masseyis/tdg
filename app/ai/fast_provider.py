@@ -43,7 +43,12 @@ class FastAIProvider(AIProvider):
         """Check if any fast AI provider is available"""
         return bool(self.openai_client or self.anthropic_client)
 
-    async def generate_cases(self, endpoint: Any, options: Dict[str, Any], progress_callback: Optional[ProgressCallback] = None) -> List[TestCase]:
+    async def generate_cases(
+        self,
+        endpoint: Any,
+        options: Dict[str, Any],
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> List[TestCase]:
         """Generate test cases using the fastest available AI model"""
 
         # Try OpenAI first (gpt-4o-mini is fastest)
@@ -169,10 +174,10 @@ class FastAIProvider(AIProvider):
     async def _call_ai(self, prompt: str) -> str:
         """
         Call AI API with a custom prompt and return the response
-        
+
         Args:
             prompt: The prompt to send to AI
-            
+
         Returns:
             The AI response as a string
         """
@@ -195,7 +200,7 @@ class FastAIProvider(AIProvider):
                 return response.choices[0].message.content
             except Exception as e:
                 logger.warning(f"OpenAI enhancement failed: {e}")
-        
+
         # Try Anthropic as fallback
         if self.anthropic_client:
             try:
@@ -209,5 +214,5 @@ class FastAIProvider(AIProvider):
                 return message.content[0].text
             except Exception as e:
                 logger.warning(f"Anthropic enhancement failed: {e}")
-        
+
         raise Exception("No AI provider available for enhancement")

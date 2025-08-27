@@ -68,14 +68,14 @@ def normalize_openapi(spec: Dict[str, Any]) -> NormalizedAPI:
     # Add debug logging
     logger.debug(f"Normalizing OpenAPI spec: {type(spec)}")
     logger.debug(f"Spec keys: {list(spec.keys()) if isinstance(spec, dict) else 'Not a dict'}")
-    
+
     # Add more detailed logging for debugging
     logger.info(f"🔍 Normalizing OpenAPI spec type: {type(spec)}")
     if isinstance(spec, dict):
         logger.info(f"🔍 Spec keys: {list(spec.keys())}")
-        if 'info' in spec:
+        if "info" in spec:
             logger.info(f"🔍 Info section: {spec['info']}")
-        if 'paths' in spec:
+        if "paths" in spec:
             logger.info(f"🔍 Paths count: {len(spec['paths'])}")
     else:
         logger.error(f"❌ Spec is not a dict: {spec}")

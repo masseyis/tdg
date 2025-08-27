@@ -111,12 +111,12 @@ public class {class_name} extends BaseTest {{
                 break;
             }}
         }}
-        
+
         if (testCase == null) {{
             fail("Test case not found: " + testCaseId);
             return;
         }}
-        
+
         String method = testCase.get("method").asText();
         String path = testCase.get("path").asText();
         JsonNode bodyNode = testCase.get("body");

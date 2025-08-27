@@ -24,7 +24,7 @@ async def load_openapi_spec(source: str) -> Dict[str, Any]:
     logger.info(f"🔍 Loading OpenAPI spec from source type: {type(source)}")
     logger.info(f"🔍 Source length: {len(source) if isinstance(source, str) else 'N/A'}")
     logger.info(f"🔍 Source preview: {source[:100] if isinstance(source, str) else 'N/A'}...")
-    
+
     try:
         # Try URL first
         if source.startswith(("http://", "https://")):

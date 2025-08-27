@@ -8,11 +8,13 @@ from pydantic import BaseModel, Field, HttpUrl
 
 class ValidateRequest(BaseModel):
     """Request schema for OpenAPI validation"""
+
     openapi: str = Field(..., description="OpenAPI specification content or URL")
 
 
 class ValidateResponse(BaseModel):
     """Response schema for OpenAPI validation"""
+
     valid: bool
     endpoints: Optional[int] = None
     summary: Optional[Dict[str, Any]] = None
@@ -21,11 +23,11 @@ class ValidateResponse(BaseModel):
 
 class GenerateRequest(BaseModel):
     """Request schema for test generation"""
+
     openapi: str = Field(..., description="OpenAPI specification content or URL")
     casesPerEndpoint: int = Field(10, description="Number of test cases per endpoint")
     outputs: List[str] = Field(
-        ["junit", "python", "nodejs", "postman"],
-        description="Output formats to generate"
+        ["junit", "python", "nodejs", "postman"], description="Output formats to generate"
     )
     domainHint: Optional[str] = Field(None, description="Domain hint for test data")
     seed: Optional[int] = Field(None, description="Random seed for reproducible results")
@@ -35,6 +37,7 @@ class GenerateRequest(BaseModel):
 
 class UserProfile(BaseModel):
     """User profile information from Clerk"""
+
     user_id: str
     email: Optional[str] = None
     email_verified: bool = False
@@ -47,6 +50,7 @@ class UserProfile(BaseModel):
 
 class SubscriptionTier(BaseModel):
     """User subscription tier information"""
+
     tier: str = Field(..., description="Subscription tier: free, basic, pro, enterprise")
     name: str = Field(..., description="Human-readable tier name")
     monthly_price: Optional[float] = Field(None, description="Monthly price in USD")
@@ -57,6 +61,7 @@ class SubscriptionTier(BaseModel):
 
 class UsageMetrics(BaseModel):
     """User usage metrics"""
+
     user_id: str
     tier: str
     current_period: str  # e.g., "2025-01"
@@ -71,6 +76,7 @@ class UsageMetrics(BaseModel):
 
 class AuthResponse(BaseModel):
     """Authentication response"""
+
     authenticated: bool
     user: Optional[UserProfile] = None
     subscription: Optional[SubscriptionTier] = None
@@ -81,16 +87,19 @@ class AuthResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     """Login request (for Clerk webhook handling)"""
+
     token: str = Field(..., description="Clerk JWT token")
 
 
 class LogoutRequest(BaseModel):
     """Logout request"""
+
     session_id: str = Field(..., description="Session ID to invalidate")
 
 
 class WebhookEvent(BaseModel):
     """Clerk webhook event"""
+
     type: str = Field(..., description="Event type")
     data: Dict[str, Any] = Field(..., description="Event data")
     object: str = Field(..., description="Object type")
@@ -107,16 +116,16 @@ SUBSCRIPTION_TIERS = {
             "5 generations per month",
             "Basic test cases",
             "Standard priority",
-            "Community support"
+            "Community support",
         ],
         limits={
             "generations_per_month": 5,
             "downloads_per_month": 10,
             "max_endpoints": 20,
             "max_cases_per_endpoint": 5,
-            "storage_mb": 100
+            "storage_mb": 100,
         },
-        priority=3  # LOW priority
+        priority=3,  # LOW priority
     ),
     "basic": SubscriptionTier(
         tier="basic",
@@ -126,16 +135,16 @@ SUBSCRIPTION_TIERS = {
             "50 generations per month",
             "Enhanced test cases",
             "Normal priority",
-            "Email support"
+            "Email support",
         ],
         limits={
             "generations_per_month": 50,
             "downloads_per_month": 100,
             "max_endpoints": 100,
             "max_cases_per_endpoint": 10,
-            "storage_mb": 500
+            "storage_mb": 500,
         },
-        priority=2  # NORMAL priority
+        priority=2,  # NORMAL priority
     ),
     "pro": SubscriptionTier(
         tier="pro",
@@ -146,16 +155,16 @@ SUBSCRIPTION_TIERS = {
             "Advanced test cases",
             "High priority",
             "Priority support",
-            "Custom domains"
+            "Custom domains",
         ],
         limits={
             "generations_per_month": -1,  # Unlimited
-            "downloads_per_month": -1,    # Unlimited
-            "max_endpoints": -1,          # Unlimited
+            "downloads_per_month": -1,  # Unlimited
+            "max_endpoints": -1,  # Unlimited
             "max_cases_per_endpoint": 20,
-            "storage_mb": 2000
+            "storage_mb": 2000,
         },
-        priority=1  # HIGH priority
+        priority=1,  # HIGH priority
     ),
     "enterprise": SubscriptionTier(
         tier="enterprise",
@@ -167,15 +176,15 @@ SUBSCRIPTION_TIERS = {
             "Highest priority",
             "Dedicated support",
             "Custom integrations",
-            "SLA guarantees"
+            "SLA guarantees",
         ],
         limits={
             "generations_per_month": -1,  # Unlimited
-            "downloads_per_month": -1,    # Unlimited
-            "max_endpoints": -1,          # Unlimited
-            "max_cases_per_endpoint": -1, # Unlimited
-            "storage_mb": 10000
+            "downloads_per_month": -1,  # Unlimited
+            "max_endpoints": -1,  # Unlimited
+            "max_cases_per_endpoint": -1,  # Unlimited
+            "storage_mb": 10000,
         },
-        priority=1  # HIGH priority
-    )
+        priority=1,  # HIGH priority
+    ),
 }

@@ -21,7 +21,12 @@ class NullProvider(AIProvider):
         """Always available"""
         return True
 
-    async def generate_cases(self, endpoint: Any, options: Dict[str, Any], progress_callback: Optional[ProgressCallback] = None) -> List[TestCase]:
+    async def generate_cases(
+        self,
+        endpoint: Any,
+        options: Dict[str, Any],
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> List[TestCase]:
         """Generate test cases using faker and heuristics"""
         cases = []
         count = options.get("count", 10)

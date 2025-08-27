@@ -137,7 +137,9 @@ async def generate_test_cases(
                 "speed": ai_speed,
             }
 
-            cases = await provider.generate_cases(endpoint, options, None)  # No progress callback for sync generation
+            cases = await provider.generate_cases(
+                endpoint, options, None
+            )  # No progress callback for sync generation
 
             # Validate and fix generated data
             for case in cases:
@@ -214,7 +216,7 @@ async def generate_test_cases_with_progress(
 ) -> Dict[str, Any]:
     """Generate test cases with real-time progress updates"""
     from app.main import update_progress
-    
+
     # Create progress callback for WebSocket updates
     progress_callback = create_progress_callback(task_id, update_progress)
 
@@ -237,12 +239,16 @@ async def generate_test_cases_with_progress(
 
     # Process endpoints with progress updates
     total_endpoints = len(normalized_spec.endpoints)
-    await update_progress(task_id, "generating", 30, f"Starting hybrid generation for {total_endpoints} endpoints...")
+    await update_progress(
+        task_id, "generating", 30, f"Starting hybrid generation for {total_endpoints} endpoints..."
+    )
 
     endpoint_results = []
     for i, endpoint in enumerate(normalized_spec.endpoints):
         # Update progress for each endpoint
-        progress = 30 + int((i / total_endpoints) * 50)  # 30% to 80% (leaving room for AI enhancement)
+        progress = 30 + int(
+            (i / total_endpoints) * 50
+        )  # 30% to 80% (leaving room for AI enhancement)
         await update_progress(
             task_id,
             "generating",
@@ -254,9 +260,9 @@ async def generate_test_cases_with_progress(
 
         # Generate cases for this endpoint
         cases = await provider.generate_cases(
-            endpoint, 
-            {"count": cases_per_endpoint, "domain_hint": domain_hint, "speed": ai_speed}, 
-            progress_callback
+            endpoint,
+            {"count": cases_per_endpoint, "domain_hint": domain_hint, "speed": ai_speed},
+            progress_callback,
         )
 
         endpoint_results.append(cases)
@@ -316,6 +322,8 @@ async def generate_test_cases_with_progress(
     if "sql" in outputs:
         artifacts["sql"] = sql_renderer.render(all_cases, table_name=domain_hint or "test_data")
 
-    await update_progress(task_id, "generating", 90, "Hybrid generation complete, creating artifacts...")
+    await update_progress(
+        task_id, "generating", 90, "Hybrid generation complete, creating artifacts..."
+    )
 
     return artifacts

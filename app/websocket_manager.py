@@ -39,8 +39,10 @@ class WebSocketManager:
         if task_id not in self.active_connections:
             self.active_connections[task_id] = []
         self.active_connections[task_id].append(websocket)
-        
-        logger.info(f"🔌 WebSocket added to active connections for task {task_id}. Total connections: {len(self.active_connections[task_id])}")
+
+        logger.info(
+            f"🔌 WebSocket added to active connections for task {task_id}. Total connections: {len(self.active_connections[task_id])}"
+        )
         logger.info(f"🔍 Current active connections: {list(self.active_connections.keys())}")
 
         # Send initial progress if available
@@ -52,7 +54,10 @@ class WebSocketManager:
                 # Capture WebSocket send errors with Sentry for monitoring
                 try:
                     from app.sentry import capture_exception
-                    capture_exception(e, context={"task_id": task_id, "stage": "websocket_send_initial"})
+
+                    capture_exception(
+                        e, context={"task_id": task_id, "stage": "websocket_send_initial"}
+                    )
                 except ImportError:
                     pass  # Sentry not available
 
@@ -70,7 +75,7 @@ class WebSocketManager:
                     message = await websocket.receive_text()
                     # Handle any client messages if needed
                     logger.debug(f"Received WebSocket message: {message}")
-                except Exception as e:
+                except Exception:
                     # Client disconnected or connection closed
                     logger.info(f"WebSocket connection closed for task {task_id}")
                     break
@@ -79,6 +84,7 @@ class WebSocketManager:
             # Capture WebSocket errors with Sentry for monitoring
             try:
                 from app.sentry import capture_exception
+
                 capture_exception(e, context={"task_id": task_id, "stage": "websocket_manager"})
             except ImportError:
                 pass  # Sentry not available
@@ -118,12 +124,14 @@ class WebSocketManager:
         # Broadcast to all connected clients for this task
         logger.info(f"🔍 Checking for active connections for task {task_id}")
         logger.info(f"🔍 Available task IDs: {list(self.active_connections.keys())}")
-        
+
         if task_id in self.active_connections:
             disconnected_websockets = []
             message_json = json.dumps(asdict(update))
-            logger.info(f"🔍 Broadcasting to {len(self.active_connections[task_id])} WebSocket connections: {message_json}")
-            
+            logger.info(
+                f"🔍 Broadcasting to {len(self.active_connections[task_id])} WebSocket connections: {message_json}"
+            )
+
             for websocket in self.active_connections[task_id]:
                 try:
                     await websocket.send_text(message_json)
@@ -133,7 +141,10 @@ class WebSocketManager:
                     # Capture WebSocket send errors with Sentry for monitoring
                     try:
                         from app.sentry import capture_exception
-                        capture_exception(e, context={"task_id": task_id, "stage": "websocket_send_progress"})
+
+                        capture_exception(
+                            e, context={"task_id": task_id, "stage": "websocket_send_progress"}
+                        )
                     except ImportError:
                         pass  # Sentry not available
                     disconnected_websockets.append(websocket)
@@ -177,7 +188,10 @@ class WebSocketManager:
                     # Capture WebSocket close errors with Sentry for monitoring
                     try:
                         from app.sentry import capture_exception
-                        capture_exception(e, context={"task_id": task_id, "stage": "websocket_close"})
+
+                        capture_exception(
+                            e, context={"task_id": task_id, "stage": "websocket_close"}
+                        )
                     except ImportError:
                         pass  # Sentry not available
             del self.active_connections[task_id]
