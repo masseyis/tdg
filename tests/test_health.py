@@ -1,14 +1,13 @@
 """Health check tests"""
 from fastapi.testclient import TestClient
 from app.main import app
-import httpx
 
 client = TestClient(app)
 
 
 def test_health_endpoint():
     """Test health endpoint"""
-    response = httpx.get("http://localhost:8080/health")
+    response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
