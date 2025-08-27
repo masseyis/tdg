@@ -41,4 +41,5 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "${UVICORN_WORKERS:-2}", "--limit-max-requests", "1000", "--loop", "uvloop"]
+# Use shell format to allow environment variable expansion
+CMD uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers ${UVICORN_WORKERS:-2} --limit-max-requests 1000 --loop uvloop
