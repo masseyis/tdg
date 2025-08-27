@@ -142,16 +142,44 @@ async def app_page(request: Request):
             },
         )
     
-    # For now, always bypass authentication to get tests working
-    logger.info("🔓 Temporarily bypassing authentication for testing")
-    return templates.TemplateResponse(
-        "app.html",
-        {
-            "request": request,
-            "sentry_dsn": settings.sentry_dsn,
-            "sentry_environment": settings.sentry_environment,
-        },
-    )
+    # Check for authentication token
+    auth_header = request.headers.get("authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        # No token, redirect to login
+        from fastapi.responses import RedirectResponse
+        redirect_url = f"/login?redirect={request.url.path}"
+        return RedirectResponse(url=redirect_url, status_code=302)
+    
+    # Verify token
+    try:
+        from app.auth.middleware import get_current_user
+        from app.auth.clerk_auth import get_clerk_auth
+        
+        token = auth_header.split(" ")[1]
+        clerk_auth = get_clerk_auth()
+        token_payload = clerk_auth.verify_jwt(token)
+        
+        if not token_payload:
+            # Invalid token, redirect to login
+            from fastapi.responses import RedirectResponse
+            redirect_url = f"/login?redirect={request.url.path}"
+            return RedirectResponse(url=redirect_url, status_code=302)
+        
+        # Valid token, render app page
+        return templates.TemplateResponse(
+            "app.html",
+            {
+                "request": request,
+                "sentry_dsn": settings.sentry_dsn,
+                "sentry_environment": settings.sentry_environment,
+            },
+        )
+    except Exception as e:
+        logger.error(f"Authentication error: {e}")
+        # Error, redirect to login
+        from fastapi.responses import RedirectResponse
+        redirect_url = f"/login?redirect={request.url.path}"
+        return RedirectResponse(url=redirect_url, status_code=302)
 
 
 @app.get("/login", response_class=HTMLResponse)
