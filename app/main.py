@@ -203,15 +203,15 @@ async def health_check():
 async def test_auth_bypass():
     """
     Test endpoint to verify authentication bypass is working.
-    
+
     This endpoint is only for testing and should not be used in production.
     """
     from app.config import settings
-    
+
     return {
         "message": "Authentication bypass test",
         "disable_auth_for_dev": settings.disable_auth_for_dev,
-        "timestamp": time.time()
+        "timestamp": time.time(),
     }
 
 
