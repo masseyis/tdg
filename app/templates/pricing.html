@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,10 +7,11 @@
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="apple-touch-icon" href="/static/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="min-h-screen bg-gray-950 text-white">
     <!-- Navigation -->
-    <nav class="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+    <nav class="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
@@ -20,161 +21,161 @@
                 </div>
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-8">
-                        <a href="/#product" class="text-gray-600 hover:text-gray-900 transition-colors">Product</a>
-                        <a href="/guide" class="text-gray-600 hover:text-gray-900 transition-colors">Guide</a>
-                        <a href="https://github.com/masseyis/tdg" class="text-gray-600 hover:text-gray-900 transition-colors">GitHub</a>
+                        <a href="/#product" class="text-gray-300 hover:text-white transition-colors">Product</a>
+                        <a href="/guide" class="text-gray-300 hover:text-white transition-colors">Guide</a>
+                        <a href="https://github.com/masseyis/tdg" class="text-gray-300 hover:text-white transition-colors">GitHub</a>
                     </div>
                 </div>
-                <a href="/app" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">Get Started</a>
+                <a href="/app" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition-colors">Get Started</a>
             </div>
         </div>
     </nav>
 
     <div class="container mx-auto px-4 py-8">
         <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h1>
-            <p class="text-xl text-gray-600">Choose the plan that fits your needs</p>
+            <h1 class="text-4xl font-bold font-space-grotesk text-white mb-4">Simple, Transparent Pricing</h1>
+            <p class="text-xl text-gray-300">Choose the plan that fits your needs</p>
         </div>
         
         <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <!-- Free Tier -->
-            <div class="bg-white rounded-lg shadow-lg p-8 border-2 border-gray-200">
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 hover:bg-gray-800/50 transition-colors">
                 <div class="text-center mb-8">
-                    <h3 class="text-2xl font-bold text-gray-900 mb-2">Free</h3>
-                    <div class="text-4xl font-bold text-gray-900 mb-2">$0</div>
-                    <p class="text-gray-600">per month</p>
+                    <h3 class="text-2xl font-bold font-space-grotesk text-white mb-2">Free</h3>
+                    <div class="text-4xl font-bold text-teal-400 mb-2">$0</div>
+                    <p class="text-gray-400">per month</p>
                 </div>
                 
                 <ul class="space-y-4 mb-8">
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         5 generations per month
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Up to 20 endpoints
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Basic test cases
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Community support
                     </li>
                 </ul>
                 
-                <button class="w-full bg-gray-200 text-gray-700 py-3 px-6 rounded-md font-medium">
+                <button class="w-full bg-gray-800 text-gray-300 py-3 px-6 rounded-lg font-medium border border-gray-700">
                     Current Plan
                 </button>
             </div>
             
             <!-- Basic Tier -->
-            <div class="bg-white rounded-lg shadow-lg p-8 border-2 border-blue-500 relative">
+            <div class="bg-gray-900 border-2 border-teal-500 rounded-2xl p-8 hover:bg-gray-800/50 transition-colors relative">
                 <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <span class="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium">Most Popular</span>
+                    <span class="bg-teal-500 text-white px-4 py-2 rounded-full text-sm font-medium">Most Popular</span>
                 </div>
                 
                 <div class="text-center mb-8">
-                    <h3 class="text-2xl font-bold text-gray-900 mb-2">Basic</h3>
-                    <div class="text-4xl font-bold text-gray-900 mb-2">$9.99</div>
-                    <p class="text-gray-600">per month</p>
+                    <h3 class="text-2xl font-bold font-space-grotesk text-white mb-2">Basic</h3>
+                    <div class="text-4xl font-bold text-teal-400 mb-2">$9.99</div>
+                    <p class="text-gray-400">per month</p>
                 </div>
                 
                 <ul class="space-y-4 mb-8">
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         50 generations per month
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Up to 100 endpoints
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Enhanced test cases
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Email support
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Normal priority queue
                     </li>
                 </ul>
                 
-                <button onclick="upgradeToBasic()" class="w-full bg-blue-500 text-white py-3 px-6 rounded-md font-medium hover:bg-blue-600 transition-colors">
+                <button onclick="upgradeToBasic()" class="w-full bg-teal-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-teal-700 transition-colors">
                     Upgrade to Basic
                 </button>
             </div>
             
             <!-- Pro Tier -->
-            <div class="bg-white rounded-lg shadow-lg p-8 border-2 border-gray-200">
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 hover:bg-gray-800/50 transition-colors">
                 <div class="text-center mb-8">
-                    <h3 class="text-2xl font-bold text-gray-900 mb-2">Professional</h3>
-                    <div class="text-4xl font-bold text-gray-900 mb-2">$29.99</div>
-                    <p class="text-gray-600">per month</p>
+                    <h3 class="text-2xl font-bold font-space-grotesk text-white mb-2">Professional</h3>
+                    <div class="text-4xl font-bold text-teal-400 mb-2">$29.99</div>
+                    <p class="text-gray-400">per month</p>
                 </div>
                 
                 <ul class="space-y-4 mb-8">
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Unlimited generations
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Unlimited endpoints
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Advanced test cases
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Priority support
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         High priority queue
                     </li>
-                    <li class="flex items-center">
-                        <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <li class="flex items-center text-gray-300">
+                        <svg class="w-5 h-5 text-teal-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         Custom domains
                     </li>
                 </ul>
                 
-                <button onclick="upgradeToPro()" class="w-full bg-gray-900 text-white py-3 px-6 rounded-md font-medium hover:bg-gray-800 transition-colors">
+                <button onclick="upgradeToPro()" class="w-full bg-teal-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-teal-700 transition-colors">
                     Upgrade to Pro
                 </button>
             </div>
@@ -182,14 +183,14 @@
         
         <!-- Enterprise Section -->
         <div class="mt-16 text-center">
-            <div class="bg-white rounded-lg shadow-lg p-8 max-w-2xl mx-auto">
-                <h3 class="text-3xl font-bold text-gray-900 mb-4">Enterprise</h3>
-                <p class="text-xl text-gray-600 mb-6">Custom solutions for large organizations</p>
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 max-w-2xl mx-auto">
+                <h3 class="text-3xl font-bold font-space-grotesk text-white mb-4">Enterprise</h3>
+                <p class="text-xl text-gray-300 mb-6">Custom solutions for large organizations</p>
                 
                 <div class="grid md:grid-cols-2 gap-6 mb-8 text-left">
                     <div>
-                        <h4 class="font-semibold text-gray-900 mb-3">Features</h4>
-                        <ul class="space-y-2 text-gray-600">
+                        <h4 class="font-semibold text-teal-400 mb-3">Features</h4>
+                        <ul class="space-y-2 text-gray-300">
                             <li>• Unlimited everything</li>
                             <li>• Custom test case generation</li>
                             <li>• Highest priority queue</li>
@@ -199,8 +200,8 @@
                         </ul>
                     </div>
                     <div>
-                        <h4 class="font-semibold text-gray-900 mb-3">Perfect for</h4>
-                        <ul class="space-y-2 text-gray-600">
+                        <h4 class="font-semibold text-teal-400 mb-3">Perfect for</h4>
+                        <ul class="space-y-2 text-gray-300">
                             <li>• Large development teams</li>
                             <li>• Enterprise applications</li>
                             <li>• High-volume testing</li>
@@ -210,7 +211,7 @@
                     </div>
                 </div>
                 
-                <button onclick="contactSales()" class="bg-blue-600 text-white py-3 px-8 rounded-md font-medium hover:bg-blue-700 transition-colors">
+                <button onclick="contactSales()" class="bg-teal-600 text-white py-3 px-8 rounded-lg font-medium hover:bg-teal-700 transition-colors">
                     Contact Sales
                 </button>
             </div>
@@ -218,31 +219,38 @@
         
         <!-- FAQ Section -->
         <div class="mt-16 max-w-4xl mx-auto">
-            <h3 class="text-3xl font-bold text-center text-gray-900 mb-8">Frequently Asked Questions</h3>
+            <h3 class="text-3xl font-bold font-space-grotesk text-center text-white mb-8">Frequently Asked Questions</h3>
             
             <div class="space-y-6">
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h4 class="font-semibold text-gray-900 mb-2">Can I change my plan at any time?</h4>
-                    <p class="text-gray-600">Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <h4 class="font-semibold text-teal-400 mb-2">Can I change my plan at any time?</h4>
+                    <p class="text-gray-300">Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
                 </div>
                 
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h4 class="font-semibold text-gray-900 mb-2">What happens if I exceed my limits?</h4>
-                    <p class="text-gray-600">You'll receive a notification when you're close to your limits. Upgrade your plan to continue generating tests.</p>
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <h4 class="font-semibold text-teal-400 mb-2">What happens if I exceed my limits?</h4>
+                    <p class="text-gray-300">You'll receive a notification when you're close to your limits. Upgrade your plan to continue generating tests.</p>
                 </div>
                 
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h4 class="font-semibold text-gray-900 mb-2">Is there a free trial?</h4>
-                    <p class="text-gray-600">Yes! Start with our free plan and upgrade when you need more features or higher limits.</p>
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <h4 class="font-semibold text-teal-400 mb-2">Is there a free trial?</h4>
+                    <p class="text-gray-300">Yes! Start with our free plan and upgrade when you need more features or higher limits.</p>
                 </div>
                 
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h4 class="font-semibold text-gray-900 mb-2">How does priority queuing work?</h4>
-                    <p class="text-gray-600">Higher-tier plans get priority in our generation queue, ensuring faster processing during peak times.</p>
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                    <h4 class="font-semibold text-teal-400 mb-2">How does priority queuing work?</h4>
+                    <p class="text-gray-300">Higher-tier plans get priority in our generation queue, ensuring faster processing during peak times.</p>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 py-8 px-4 sm:px-6 lg:px-8 mt-16">
+        <div class="max-w-7xl mx-auto text-center">
+            <p class="text-gray-400">&copy; 2024 SpecMint. Open source and free to use.</p>
+        </div>
+    </footer>
 
     <script>
         function upgradeToBasic() {
@@ -262,3 +270,4 @@
     </script>
 </body>
 </html>
+

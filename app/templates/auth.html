@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,10 +7,11 @@
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="apple-touch-icon" href="/static/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="min-h-screen bg-gray-950 text-white">
     <!-- Navigation -->
-    <nav class="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+    <nav class="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
@@ -20,25 +21,25 @@
                 </div>
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-8">
-                        <a href="/#product" class="text-gray-600 hover:text-gray-900 transition-colors">Product</a>
-                        <a href="/guide" class="text-gray-600 hover:text-gray-900 transition-colors">Guide</a>
-                        <a href="/pricing" class="text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
-                        <a href="https://github.com/masseyis/tdg" class="text-gray-600 hover:text-gray-900 transition-colors">GitHub</a>
+                        <a href="/#product" class="text-gray-300 hover:text-white transition-colors">Product</a>
+                        <a href="/guide" class="text-gray-300 hover:text-white transition-colors">Guide</a>
+                        <a href="/pricing" class="text-gray-300 hover:text-white transition-colors">Pricing</a>
+                        <a href="https://github.com/masseyis/tdg" class="text-gray-300 hover:text-white transition-colors">GitHub</a>
                     </div>
                 </div>
-                <a href="/app" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">Get Started</a>
+                <a href="/app" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition-colors">Get Started</a>
             </div>
         </div>
     </nav>
 
     <div class="container mx-auto px-4 py-8">
-        <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-            <h1 class="text-2xl font-bold text-center mb-6">Authentication</h1>
+        <div class="max-w-md mx-auto bg-gray-900 border border-gray-800 rounded-2xl p-6">
+            <h1 class="text-2xl font-bold font-space-grotesk text-center mb-6">Authentication</h1>
             
             <!-- Login Section -->
             <div id="loginSection" class="mb-6">
-                <h2 class="text-lg font-semibold mb-4">Sign In</h2>
-                <p class="text-gray-600 mb-4">
+                <h2 class="text-lg font-semibold font-space-grotesk mb-4">Sign In</h2>
+                <p class="text-gray-300 mb-4">
                     Sign in with your preferred provider to access the Test Data Generator.
                 </p>
                 
@@ -73,51 +74,51 @@
                 </div>
                 
                 <div class="mt-4 text-center">
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-400">
                         By continuing, you agree to our 
-                        <a href="#" class="text-blue-600 hover:underline">Terms of Service</a> and 
-                        <a href="#" class="text-blue-600 hover:underline">Privacy Policy</a>
+                        <a href="#" class="text-teal-400 hover:underline">Terms of Service</a> and 
+                        <a href="#" class="text-teal-400 hover:underline">Privacy Policy</a>
                     </p>
                 </div>
             </div>
             
             <!-- User Profile Section (Hidden by default) -->
             <div id="userSection" class="hidden">
-                <h2 class="text-lg font-semibold mb-4">Your Account</h2>
+                <h2 class="text-lg font-semibold font-space-grotesk mb-4">Your Account</h2>
                 
-                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-4">
                     <div class="flex items-center mb-3">
-                        <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold mr-3" id="userAvatar">
+                        <div class="w-10 h-10 bg-teal-500 rounded-full flex items-center justify-center text-white font-semibold mr-3" id="userAvatar">
                             U
                         </div>
                         <div>
-                            <p class="font-medium" id="userName">User Name</p>
-                            <p class="text-sm text-gray-600" id="userEmail">user@example.com</p>
+                            <p class="font-medium text-white" id="userName">User Name</p>
+                            <p class="text-sm text-gray-300" id="userEmail">user@example.com</p>
                         </p>
                     </div>
                 </div>
                 
                 <!-- Subscription Info -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <h3 class="font-semibold text-blue-900 mb-2">Current Plan</h3>
+                <div class="bg-teal-900/20 border border-teal-700 rounded-lg p-4 mb-4">
+                    <h3 class="font-semibold text-teal-400 mb-2">Current Plan</h3>
                     <div class="flex justify-between items-center">
-                        <span class="text-blue-800 font-medium" id="planName">Free Plan</span>
-                        <span class="text-blue-600 text-sm" id="planPrice">$0/month</span>
+                        <span class="text-teal-300 font-medium" id="planName">Free Plan</span>
+                        <span class="text-teal-400 text-sm" id="planPrice">$0/month</span>
                     </div>
-                    <p class="text-blue-700 text-sm mt-1" id="planFeatures">5 generations per month</p>
+                    <p class="text-teal-300 text-sm mt-1" id="planFeatures">5 generations per month</p>
                 </div>
                 
                 <!-- Usage Stats -->
-                <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                    <h3 class="font-semibold mb-2">Usage This Month</h3>
+                <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-4">
+                    <h3 class="font-semibold text-white mb-2">Usage This Month</h3>
                     <div class="space-y-2">
                         <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Generations:</span>
-                            <span class="text-sm font-medium" id="generationsUsed">0 / 5</span>
+                            <span class="text-sm text-gray-300">Generations:</span>
+                            <span class="text-sm font-medium text-white" id="generationsUsed">0 / 5</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Downloads:</span>
-                            <span class="text-sm font-medium" id="downloadsUsed">0 / 10</span>
+                            <span class="text-sm text-gray-300">Downloads:</span>
+                            <span class="text-sm font-medium text-white" id="downloadsUsed">0 / 10</span>
                         </div>
                     </div>
                 </div>
@@ -125,17 +126,24 @@
                 <!-- Actions -->
                 <div class="space-y-3">
                     <button onclick="upgradePlan()" 
-                            class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                            class="w-full bg-teal-600 text-white py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors">
                         Upgrade Plan
                     </button>
                     <button onclick="signOut()" 
-                            class="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 transition-colors">
+                            class="w-full bg-gray-700 text-gray-200 py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">
                         Sign Out
                     </button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800 py-8 px-4 sm:px-6 lg:px-8 mt-16">
+        <div class="max-w-7xl mx-auto text-center">
+            <p class="text-gray-400">&copy; 2024 SpecMint. Open source and free to use.</p>
+        </div>
+    </footer>
 
     <script>
         // Check if user is already authenticated
