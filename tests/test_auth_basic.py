@@ -7,10 +7,46 @@ These tests verify that the authentication endpoints are working correctly.
 import pytest
 import httpx
 import asyncio
+import time
+import socket
+
+# Import the WebService class from the E2E tests
+from tests.test_e2e_functional import WebService
+
+
+class AuthTestService:
+    """Manages the test server for authentication tests"""
+    
+    def __init__(self):
+        self.web_service = None
+        
+    def start_server(self):
+        """Start the test server with authentication enabled"""
+        self.web_service = WebService(port=8000, enable_auth=True)
+        success = self.web_service.start()
+        if not success:
+            raise RuntimeError("Failed to start test server")
+        
+        # Wait a bit more for the server to be fully ready
+        time.sleep(2)
+        
+    def stop_server(self):
+        """Stop the test server"""
+        if self.web_service:
+            self.web_service.stop()
+
+
+@pytest.fixture(scope="module")
+def auth_server():
+    """Fixture to start and stop the authentication test server"""
+    service = AuthTestService()
+    service.start_server()
+    yield service
+    service.stop_server()
 
 
 @pytest.mark.asyncio
-async def test_github_oauth_redirect():
+async def test_github_oauth_redirect(auth_server):
     """Test that GitHub OAuth redirects to mock success page."""
     async with httpx.AsyncClient() as client:
         response = await client.get("http://localhost:8000/auth/github", follow_redirects=True)
@@ -22,7 +58,7 @@ async def test_github_oauth_redirect():
 
 
 @pytest.mark.asyncio
-async def test_google_oauth_redirect():
+async def test_google_oauth_redirect(auth_server):
     """Test that Google OAuth redirects to mock success page."""
     async with httpx.AsyncClient() as client:
         response = await client.get("http://localhost:8000/auth/google", follow_redirects=True)
@@ -34,7 +70,7 @@ async def test_google_oauth_redirect():
 
 
 @pytest.mark.asyncio
-async def test_apple_oauth_redirect():
+async def test_apple_oauth_redirect(auth_server):
     """Test that Apple OAuth redirects to mock success page."""
     async with httpx.AsyncClient() as client:
         response = await client.get("http://localhost:8000/auth/apple", follow_redirects=True)
@@ -46,7 +82,7 @@ async def test_apple_oauth_redirect():
 
 
 @pytest.mark.asyncio
-async def test_mock_success_page():
+async def test_mock_success_page(auth_server):
     """Test that the mock success page works correctly."""
     async with httpx.AsyncClient() as client:
         response = await client.get("http://localhost:8000/auth/mock-success?provider=test")
@@ -59,7 +95,7 @@ async def test_mock_success_page():
 
 
 @pytest.mark.asyncio
-async def test_login_page_accessible():
+async def test_login_page_accessible(auth_server):
     """Test that the login page is accessible."""
     async with httpx.AsyncClient() as client:
         response = await client.get("http://localhost:8000/login")
@@ -72,7 +108,7 @@ async def test_login_page_accessible():
 
 
 @pytest.mark.asyncio
-async def test_app_page_requires_auth():
+async def test_app_page_requires_auth(auth_server):
     """Test that the app page requires authentication."""
     async with httpx.AsyncClient() as client:
         response = await client.get("http://localhost:8000/app")
@@ -82,7 +118,7 @@ async def test_app_page_requires_auth():
         assert "authentication" in response.text.lower()
 
 
-def test_auth_endpoints_exist():
+def test_auth_endpoints_exist(auth_server):
     """Test that all auth endpoints exist and respond."""
     # This test runs synchronously to check basic endpoint availability
     with httpx.Client() as client:
