@@ -89,7 +89,7 @@ from app.utils.openapi_normalizer import normalize_openapi
 from app.utils.zipping import create_artifact_zip
 from app.websocket_manager import websocket_manager
 from app.auth.routes import router as auth_router
-from app.auth.middleware import require_auth_or_dev, check_generation_limit
+from app.auth.middleware import require_auth_or_dev, require_auth_or_free_tier, check_generation_limit
 from app.sentry import init_sentry, capture_exception, set_tag
 
 request_semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
@@ -358,7 +358,7 @@ async def validate_spec(request: ValidateRequest) -> ValidateResponse:
 async def generate(
     request: GenerateRequest,
     background_tasks: BackgroundTasks,
-    current_user=Depends(require_auth_or_dev),
+    current_user=Depends(require_auth_or_free_tier),
 ):
     """
     Generate test artifacts from OpenAPI spec - JSON API endpoint
@@ -398,7 +398,7 @@ async def generate(
             task_id = str(uuid.uuid4())
 
             # Start background task with progress tracking
-            background_tasks.add_task(generate_test_artifacts_background, task_id, request)
+            background_tasks.add_task(generate_test_artifacts_background, task_id, request, current_user)
             logger.info(f"✅ Background task started for task {task_id}")
 
             # Return task ID for WebSocket progress tracking
@@ -493,7 +493,7 @@ async def download_task_result(task_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def generate_test_artifacts_background(task_id: str, request: GenerateRequest):
+async def generate_test_artifacts_background(task_id: str, request: GenerateRequest, current_user=None):
     """Background task for generating test artifacts using the generation service"""
     try:
         from app.services.generation_service import get_generation_service, Priority
@@ -518,12 +518,14 @@ async def generate_test_artifacts_background(task_id: str, request: GenerateRequ
             await update_progress(task_id, stage, progress, message)
 
         # Get user priority based on subscription tier
-        from app.auth.middleware import get_current_user
         from app.auth.middleware import get_priority_from_user
 
-        # Extract user from request context (simplified for now)
-        # In production, this would come from the authenticated user
-        user_priority = Priority.NORMAL  # Default priority
+        # Set priority based on user authentication status
+        if current_user:
+            user_priority = get_priority_from_user(current_user)
+        else:
+            # Free tier users get NORMAL priority
+            user_priority = Priority.NORMAL
 
         # submitted_task_id = service.submit_request(  # Unused variable
         service.submit_request(
@@ -553,7 +555,7 @@ async def generate_ui(
     domainHint: Optional[str] = Form(None),
     seed: Optional[int] = Form(None),
     aiSpeed: str = Form("fast"),
-    current_user=Depends(require_auth_or_dev),
+    current_user=Depends(require_auth_or_free_tier),
 ):
     """
     Handle form submission from UI - ASYNCHRONOUS with WebSocket progress tracking

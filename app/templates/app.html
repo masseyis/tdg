@@ -114,8 +114,9 @@
                 });
                 
                 if (response.status === 401) {
-                    // Not authenticated, redirect to login
-                    window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+                    // Not authenticated - for Free tier, allow access but show login prompt
+                    console.log('Not authenticated - allowing Free tier access');
+                    showFreeTierAccess();
                     return false;
                 } else if (response.ok) {
                     // Authenticated, continue
@@ -123,10 +124,23 @@
                 }
             } catch (error) {
                 console.error('Auth check failed:', error);
-                // In case of error, assume not authenticated and redirect
-                window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+                // In case of error, allow Free tier access
+                console.log('Auth check failed - allowing Free tier access');
+                showFreeTierAccess();
                 return false;
             }
+        }
+        
+        // Show Free tier access message
+        function showFreeTierAccess() {
+            // Add a banner to indicate Free tier access
+            const banner = document.createElement('div');
+            banner.className = 'bg-teal-600 text-white p-3 text-center text-sm';
+            banner.innerHTML = `
+                <span>🎉 You're using the Free tier with unlimited generations!</span>
+                <a href="/login" class="ml-2 underline hover:no-underline">Sign in</a> to save your progress and access premium features.
+            `;
+            document.body.insertBefore(banner, document.body.firstChild);
         }
         
         // Check authentication on page load

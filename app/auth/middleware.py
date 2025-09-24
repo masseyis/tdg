@@ -231,6 +231,39 @@ async def check_download_limit(
     return True
 
 
+async def require_auth_or_free_tier(
+    request: Request,
+    current_user: Optional[UserProfile] = Depends(get_current_user),
+) -> Optional[UserProfile]:
+    """
+    Require authentication for protected routes, but allow Free tier access without auth.
+
+    Args:
+        current_user: Current user from JWT token
+        request: FastAPI request object
+
+    Returns:
+        UserProfile if authenticated, None if Free tier access
+
+    Raises:
+        HTTPException: If not authenticated and not Free tier access
+    """
+    from app.config import settings
+
+    # Allow bypass in development mode
+    if settings.disable_auth_for_dev:
+        logger.info("🔓 Development mode: Authentication bypassed")
+        return None
+
+    # If authenticated, return user
+    if current_user:
+        return current_user
+
+    # For unauthenticated users, allow Free tier access
+    logger.info("🔓 Free tier access: Allowing unauthenticated access")
+    return None
+
+
 def get_priority_from_user(user: UserProfile) -> int:
     """
     Get generation priority based on user's subscription tier.
