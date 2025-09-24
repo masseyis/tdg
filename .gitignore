@@ -160,3 +160,6 @@ logs/
 .env.local
 .env.production
 secrets.json
+# BMAD (local only)
+.bmad-core/
+.bmad-*/

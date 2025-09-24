@@ -113,13 +113,13 @@ SUBSCRIPTION_TIERS = {
         name="Free",
         monthly_price=0.0,
         features=[
-            "5 generations per month",
+            "Unlimited generations",
             "Basic test cases",
             "Standard priority",
             "Community support",
         ],
         limits={
-            "generations_per_month": 5,
+            "generations_per_month": -1,  # Unlimited
             "downloads_per_month": 10,
             "max_endpoints": 20,
             "max_cases_per_endpoint": 5,

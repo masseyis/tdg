@@ -304,7 +304,7 @@ void testCreateUser(String testData) {
                 <ul className="space-y-3 mb-6">
                   <li className="flex items-center gap-2">
                     <span className="text-teal-400">✓</span>
-                    <span>10 test cases per endpoint</span>
+                    <span>Unlimited generations</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-teal-400">✓</span>
