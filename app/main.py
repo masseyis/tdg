@@ -89,7 +89,11 @@ from app.utils.openapi_normalizer import normalize_openapi
 from app.utils.zipping import create_artifact_zip
 from app.websocket_manager import websocket_manager
 from app.auth.routes import router as auth_router
-from app.auth.middleware import require_auth_or_dev, require_auth_or_free_tier, check_generation_limit
+from app.auth.middleware import (
+    require_auth_or_dev,
+    require_auth_or_free_tier,
+    check_generation_limit,
+)
 from app.sentry import init_sentry, capture_exception, set_tag
 
 request_semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
@@ -398,7 +402,9 @@ async def generate(
             task_id = str(uuid.uuid4())
 
             # Start background task with progress tracking
-            background_tasks.add_task(generate_test_artifacts_background, task_id, request, current_user)
+            background_tasks.add_task(
+                generate_test_artifacts_background, task_id, request, current_user
+            )
             logger.info(f"✅ Background task started for task {task_id}")
 
             # Return task ID for WebSocket progress tracking
@@ -493,7 +499,9 @@ async def download_task_result(task_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def generate_test_artifacts_background(task_id: str, request: GenerateRequest, current_user=None):
+async def generate_test_artifacts_background(
+    task_id: str, request: GenerateRequest, current_user=None
+):
     """Background task for generating test artifacts using the generation service"""
     try:
         from app.services.generation_service import get_generation_service, Priority
